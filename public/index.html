@@ -1,0 +1,168 @@
+<!DOCTYPE html>
+<html lang="nl">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>PowerTop</title>
+    <style>
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+            background: #0f172a;
+            color: #e2e8f0;
+            height: 100vh;
+            display: flex;
+            flex-direction: column;
+        }
+
+        header {
+            background: #1e293b;
+            padding: 12px 24px;
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            border-bottom: 1px solid #334155;
+        }
+
+        header h1 {
+            font-size: 1.2rem;
+            font-weight: 600;
+            color: #38bdf8;
+        }
+
+        #status {
+            font-size: 0.8rem;
+            color: #94a3b8;
+        }
+
+        #status span {
+            display: inline-block;
+            width: 8px;
+            height: 8px;
+            border-radius: 50%;
+            background: #64748b;
+            margin-right: 6px;
+            vertical-align: middle;
+        }
+
+        #status.live span { background: #22c55e; }
+        #status.loading span { background: #f59e0b; }
+
+        #refresh-btn {
+            background: #334155;
+            color: #e2e8f0;
+            border: none;
+            padding: 6px 14px;
+            border-radius: 6px;
+            cursor: pointer;
+            font-size: 0.85rem;
+        }
+
+        #refresh-btn:hover { background: #475569; }
+
+        #countdown {
+            font-size: 0.8rem;
+            color: #64748b;
+        }
+
+        #report-frame {
+            flex: 1;
+            width: 100%;
+            border: none;
+            background: #fff;
+        }
+
+        #loading-overlay {
+            flex: 1;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            gap: 16px;
+            color: #94a3b8;
+        }
+
+        .spinner {
+            width: 40px;
+            height: 40px;
+            border: 3px solid #334155;
+            border-top-color: #38bdf8;
+            border-radius: 50%;
+            animation: spin 1s linear infinite;
+        }
+
+        @keyframes spin { to { transform: rotate(360deg); } }
+    </style>
+</head>
+<body>
+
+<header>
+    <h1>⚡ PowerTop</h1>
+    <div id="status"><span></span>Wachten op rapport...</div>
+    <div>
+        <span id="countdown"></span>
+        <button id="refresh-btn" onclick="loadReport()">↻ Vernieuwen</button>
+    </div>
+</header>
+
+<div id="loading-overlay">
+    <div class="spinner"></div>
+    <p>PowerTop rapport wordt gegenereerd (~20 seconden)...</p>
+</div>
+
+<iframe id="report-frame" style="display:none;" src="/report"></iframe>
+
+<script>
+    const frame = document.getElementById('report-frame');
+    const overlay = document.getElementById('loading-overlay');
+    const statusEl = document.getElementById('status');
+    const countdownEl = document.getElementById('countdown');
+
+    let refreshInterval = 60;
+    let countdown = refreshInterval;
+
+    function loadReport() {
+        fetch('/api/status')
+            .then(r => r.json())
+            .then(data => {
+                if (data.available) {
+                    frame.src = '/report?' + Date.now();
+                    frame.style.display = 'block';
+                    overlay.style.display = 'none';
+                    statusEl.className = 'live';
+                    const d = new Date(data.lastUpdated);
+                    statusEl.innerHTML = `<span></span>Bijgewerkt: ${d.toLocaleTimeString('nl-NL')}`;
+                    countdown = refreshInterval;
+                } else {
+                    statusEl.className = 'loading';
+                    statusEl.innerHTML = '<span></span>Rapport wordt gegenereerd...';
+                }
+            })
+            .catch(() => {
+                statusEl.innerHTML = '<span></span>Verbindingsfout';
+            });
+    }
+
+    setInterval(() => {
+        countdown--;
+        countdownEl.textContent = `Volgende refresh: ${countdown}s`;
+        if (countdown <= 0) {
+            countdown = refreshInterval;
+            loadReport();
+        }
+    }, 1000);
+
+    loadReport();
+
+    setInterval(() => {
+        fetch('/api/status')
+            .then(r => r.json())
+            .then(data => {
+                if (!data.available) loadReport();
+            });
+    }, 5000);
+</script>
+
+</body>
+</html>
