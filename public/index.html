@@ -99,16 +99,16 @@
 
 <header>
     <h1>⚡ PowerTop</h1>
-    <div id="status"><span></span>Wachten op rapport...</div>
+    <div id="status"><span></span>Waiting for report...</div>
     <div>
         <span id="countdown"></span>
-        <button id="refresh-btn" onclick="loadReport()">↻ Vernieuwen</button>
+        <button id="refresh-btn" onclick="loadReport()">↻ Refresh</button>
     </div>
 </header>
 
 <div id="loading-overlay">
     <div class="spinner"></div>
-    <p>PowerTop rapport wordt gegenereerd (~20 seconden)...</p>
+    <p>Generating report (~20 seconds)...</p>
 </div>
 
 <iframe id="report-frame" style="display:none;" src="/report"></iframe>
@@ -132,21 +132,21 @@
                     overlay.style.display = 'none';
                     statusEl.className = 'live';
                     const d = new Date(data.lastUpdated);
-                    statusEl.innerHTML = `<span></span>Bijgewerkt: ${d.toLocaleTimeString('nl-NL')}`;
+                    statusEl.innerHTML = `<span></span>Last updated: ${d.toLocaleTimeString('nl-NL')}`;
                     countdown = refreshInterval;
                 } else {
                     statusEl.className = 'loading';
-                    statusEl.innerHTML = '<span></span>Rapport wordt gegenereerd...';
+                    statusEl.innerHTML = '<span></span>Generating report..';
                 }
             })
             .catch(() => {
-                statusEl.innerHTML = '<span></span>Verbindingsfout';
+                statusEl.innerHTML = '<span></span>Connection error';
             });
     }
 
     setInterval(() => {
         countdown--;
-        countdownEl.textContent = `Volgende refresh: ${countdown}s`;
+        countdownEl.textContent = `Auto-refresh in: ${countdown}s`;
         if (countdown <= 0) {
             countdown = refreshInterval;
             loadReport();
