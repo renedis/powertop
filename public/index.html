@@ -1,209 +1,487 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>PowerTop</title>
-    <style>
-        * { margin: 0; padding: 0; box-sizing: border-box; }
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>PowerTop</title>
+<style>
+  :root {
+    --bg:        #0f172a;
+    --surface:   #1e293b;
+    --surface2:  #273549;
+    --border:    #334155;
+    --text:      #e2e8f0;
+    --muted:     #94a3b8;
+    --accent:    #38bdf8;
+    --green:     #22c55e;
+    --yellow:    #f59e0b;
+    --red:       #ef4444;
+    --purple:    #a78bfa;
+  }
 
-        body {
-            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
-            background: #0f172a;
-            color: #e2e8f0;
-            height: 100vh;
-            display: flex;
-            flex-direction: column;
-        }
+  * { margin:0; padding:0; box-sizing:border-box; }
 
-        header {
-            background: #1e293b;
-            padding: 12px 24px;
-            display: flex;
-            align-items: center;
-            justify-content: space-between;
-            border-bottom: 1px solid #334155;
-            gap: 16px;
-        }
+  body {
+    background: var(--bg);
+    color: var(--text);
+    font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+    font-size: 13px;
+    height: 100vh;
+    display: flex;
+    flex-direction: column;
+    overflow: hidden;
+  }
 
-        header h1 {
-            font-size: 1.2rem;
-            font-weight: 600;
-            color: #38bdf8;
-            white-space: nowrap;
-        }
+  /* ── HEADER ── */
+  header {
+    background: var(--surface);
+    border-bottom: 1px solid var(--border);
+    padding: 10px 20px;
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    flex-shrink: 0;
+  }
+  header h1 { font-size: 1.1rem; font-weight: 700; color: var(--accent); white-space: nowrap; }
+  .header-right { display: flex; align-items: center; gap: 16px; margin-left: auto; }
+  #status { font-size: 0.78rem; color: var(--muted); display: flex; align-items: center; gap: 6px; white-space: nowrap; }
+  #status .dot { width:8px; height:8px; border-radius:50%; background: var(--border); flex-shrink:0; }
+  #status.live .dot  { background: var(--green); }
+  #status.loading .dot { background: var(--yellow); }
+  #countdown { font-size: 0.78rem; color: var(--muted); white-space: nowrap; }
+  #refresh-btn {
+    background: var(--surface2); color: var(--text); border: 1px solid var(--border);
+    padding: 5px 12px; border-radius: 6px; cursor: pointer; font-size: 0.8rem;
+  }
+  #refresh-btn:hover { background: var(--border); }
 
-        .header-right {
-            display: flex;
-            align-items: center;
-            gap: 20px;
-            margin-left: auto;
-        }
+  /* ── NAVBAR ── */
+  nav {
+    background: var(--surface);
+    border-bottom: 1px solid var(--border);
+    display: flex;
+    gap: 2px;
+    padding: 0 20px;
+    flex-shrink: 0;
+    overflow-x: auto;
+  }
+  nav button {
+    background: none; border: none; color: var(--muted);
+    padding: 10px 14px; cursor: pointer; font-size: 0.82rem; font-weight: 500;
+    border-bottom: 2px solid transparent; white-space: nowrap;
+    transition: color .15s, border-color .15s;
+  }
+  nav button:hover { color: var(--text); }
+  nav button.active { color: var(--accent); border-bottom-color: var(--accent); }
 
-        #status {
-            font-size: 0.8rem;
-            color: #94a3b8;
-            white-space: nowrap;
-        }
+  /* ── MAIN ── */
+  main {
+    flex: 1;
+    overflow-y: auto;
+    padding: 20px;
+    display: none;
+  }
+  main.visible { display: block; }
 
-        #status span {
-            display: inline-block;
-            width: 8px;
-            height: 8px;
-            border-radius: 50%;
-            background: #64748b;
-            margin-right: 6px;
-            vertical-align: middle;
-        }
+  /* ── LOADING ── */
+  #loading {
+    flex: 1;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    gap: 14px;
+    color: var(--muted);
+  }
+  #loading.hidden { display: none; }
+  .spinner {
+    width: 36px; height: 36px;
+    border: 3px solid var(--border);
+    border-top-color: var(--accent);
+    border-radius: 50%;
+    animation: spin 1s linear infinite;
+  }
+  @keyframes spin { to { transform: rotate(360deg); } }
 
-        #status.live span  { background: #22c55e; }
-        #status.loading span { background: #f59e0b; }
+  /* ── PANELS ── */
+  .tab-panel { display: none; }
+  .tab-panel.active { display: block; }
 
-        #countdown {
-            font-size: 0.8rem;
-            color: #64748b;
-            white-space: nowrap;
-        }
+  /* ── SYSINFO GRID ── */
+  .sysinfo-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
+    gap: 12px;
+    margin-bottom: 20px;
+  }
+  .sysinfo-card {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 8px;
+    padding: 14px 16px;
+  }
+  .sysinfo-card .label { font-size: 0.72rem; color: var(--muted); text-transform: uppercase; letter-spacing: .05em; margin-bottom: 4px; }
+  .sysinfo-card .value { font-size: 0.9rem; color: var(--text); font-weight: 500; word-break: break-word; }
 
-        #refresh-btn {
-            background: #334155;
-            color: #e2e8f0;
-            border: none;
-            padding: 6px 14px;
-            border-radius: 6px;
-            cursor: pointer;
-            font-size: 0.85rem;
-            white-space: nowrap;
-        }
+  /* ── STAT PILLS ── */
+  .stat-pills { display: flex; flex-wrap: wrap; gap: 8px; margin-bottom: 20px; }
+  .pill {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 20px;
+    padding: 5px 14px;
+    font-size: 0.8rem;
+    color: var(--text);
+  }
+  .pill b { color: var(--accent); }
 
-        #refresh-btn:hover { background: #475569; }
+  /* ── SECTION TITLE ── */
+  .section-title {
+    font-size: 0.72rem;
+    font-weight: 700;
+    text-transform: uppercase;
+    letter-spacing: .08em;
+    color: var(--muted);
+    margin-bottom: 10px;
+    margin-top: 20px;
+  }
+  .section-title:first-child { margin-top: 0; }
 
-        #report-frame {
-            flex: 1;
-            width: 100%;
-            border: none;
-            background: #0f172a;
-            display: none;
-        }
+  /* ── TABLE ── */
+  .card {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 8px;
+    overflow: hidden;
+    margin-bottom: 16px;
+  }
+  table { width: 100%; border-collapse: collapse; }
+  thead th {
+    background: var(--surface2);
+    color: var(--muted);
+    font-size: 0.72rem;
+    font-weight: 600;
+    text-transform: uppercase;
+    letter-spacing: .05em;
+    padding: 8px 12px;
+    text-align: left;
+    border-bottom: 1px solid var(--border);
+  }
+  tbody tr { border-bottom: 1px solid var(--border); }
+  tbody tr:last-child { border-bottom: none; }
+  tbody tr:hover { background: var(--surface2); }
+  tbody td { padding: 7px 12px; color: var(--text); vertical-align: top; }
+  td.mono { font-family: 'SF Mono', 'Fira Code', monospace; font-size: 0.78rem; }
+  td.desc { max-width: 500px; word-break: break-all; font-size: 0.78rem; color: var(--muted); }
 
-        #loading-overlay {
-            flex: 1;
-            display: flex;
-            flex-direction: column;
-            align-items: center;
-            justify-content: center;
-            gap: 16px;
-            color: #94a3b8;
-            background: #0f172a;
-        }
+  /* ── BADGE ── */
+  .badge {
+    display: inline-block;
+    padding: 2px 8px;
+    border-radius: 4px;
+    font-size: 0.7rem;
+    font-weight: 600;
+    text-transform: uppercase;
+  }
+  .badge-timer    { background: #1e3a5f; color: #60a5fa; }
+  .badge-process  { background: #1a3a2a; color: #4ade80; }
+  .badge-interrupt{ background: #3b2a1a; color: #fb923c; }
+  .badge-kwork    { background: #2d1a3b; color: var(--purple); }
+  .badge-default  { background: var(--surface2); color: var(--muted); }
 
-        .spinner {
-            width: 40px;
-            height: 40px;
-            border: 3px solid #334155;
-            border-top-color: #38bdf8;
-            border-radius: 50%;
-            animation: spin 1s linear infinite;
-        }
+  /* ── TUNING STATUS ── */
+  .status-good { color: var(--green); font-weight: 600; }
+  .status-bad  { color: var(--red);   font-weight: 600; }
 
-        @keyframes spin { to { transform: rotate(360deg); } }
-    </style>
+  /* ── CPU GRID ── */
+  .cpu-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(200px, 1fr)); gap: 12px; }
+  .cpu-card {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 8px;
+    padding: 12px;
+  }
+  .cpu-card h4 { font-size: 0.78rem; color: var(--accent); margin-bottom: 8px; font-weight: 600; }
+  .cpu-row { display: flex; justify-content: space-between; padding: 3px 0; border-bottom: 1px solid var(--border); font-size: 0.78rem; }
+  .cpu-row:last-child { border-bottom: none; }
+  .cpu-row .state { color: var(--muted); }
+  .cpu-row .pct   { color: var(--text); font-weight: 500; font-family: monospace; }
+
+  /* ── SCROLLBAR ── */
+  ::-webkit-scrollbar { width: 6px; height: 6px; }
+  ::-webkit-scrollbar-track { background: var(--bg); }
+  ::-webkit-scrollbar-thumb { background: var(--border); border-radius: 3px; }
+</style>
 </head>
 <body>
 
 <header>
-    <h1>⚡ PowerTop</h1>
-    <div class="header-right">
-        <div id="status"><span></span>Waiting for report...</div>
-        <div id="countdown"></div>
-        <button id="refresh-btn" onclick="loadReport()">↻ Refresh</button>
-    </div>
+  <h1>⚡ PowerTop</h1>
+  <div class="header-right">
+    <div id="status"><span class="dot"></span><span id="status-text">Waiting for report...</span></div>
+    <div id="countdown"></div>
+    <button id="refresh-btn" onclick="loadData()">↻ Refresh</button>
+  </div>
 </header>
 
-<div id="loading-overlay">
-    <div class="spinner"></div>
-    <p>Generating PowerTop report (~20 seconds)...</p>
+<nav id="navbar"></nav>
+
+<div id="loading">
+  <div class="spinner"></div>
+  <p>Generating PowerTop report (~20 seconds)...</p>
 </div>
 
-<iframe id="report-frame" src="/report"></iframe>
-    
+<main id="main">
+  <div id="tab-summary"   class="tab-panel"></div>
+  <div id="tab-software"  class="tab-panel"></div>
+  <div id="tab-cpuidle"   class="tab-panel"></div>
+  <div id="tab-cpufreq"   class="tab-panel"></div>
+  <div id="tab-devices"   class="tab-panel"></div>
+  <div id="tab-tuning"    class="tab-panel"></div>
+</main>
+
 <script>
-    const frame = document.getElementById('report-frame');
-    const overlay = document.getElementById('loading-overlay');
-    const statusEl = document.getElementById('status');
-    const countdownEl = document.getElementById('countdown');
+const REFRESH_INTERVAL = 60;
+let countdown = REFRESH_INTERVAL;
+let reportAvailable = false;
+let pollingTimer = null;
+let activeTab = 'summary';
 
-    const REFRESH_INTERVAL = 60;
-    let countdown = REFRESH_INTERVAL;
-    let reportAvailable = false;
-    let autoRefreshTimer = null;
-    let pollingTimer = null;
+const tabs = [
+  { id: 'summary',  label: 'Summary' },
+  { id: 'software', label: 'Software Info' },
+  { id: 'cpuidle',  label: 'CPU Idle' },
+  { id: 'cpufreq',  label: 'CPU Frequency' },
+  { id: 'devices',  label: 'Device Info' },
+  { id: 'tuning',   label: 'Tuning' },
+];
 
-    function showReport() {
-        frame.src = '/report?' + Date.now();
-        frame.style.display = 'block';
-        overlay.style.display = 'none';
+// Build navbar
+const navbar = document.getElementById('navbar');
+tabs.forEach(t => {
+  const btn = document.createElement('button');
+  btn.textContent = t.label;
+  btn.dataset.tab = t.id;
+  btn.onclick = () => switchTab(t.id);
+  navbar.appendChild(btn);
+});
+
+function switchTab(id) {
+  activeTab = id;
+  document.querySelectorAll('nav button').forEach(b => b.classList.toggle('active', b.dataset.tab === id));
+  document.querySelectorAll('.tab-panel').forEach(p => p.classList.toggle('active', p.id === 'tab-' + id));
+}
+switchTab('summary');
+
+function badgeCategory(cat) {
+  const c = (cat || '').toLowerCase();
+  if (c === 'timer')     return `<span class="badge badge-timer">Timer</span>`;
+  if (c === 'process')   return `<span class="badge badge-process">Process</span>`;
+  if (c === 'interrupt') return `<span class="badge badge-interrupt">IRQ</span>`;
+  if (c === 'kwork')     return `<span class="badge badge-kwork">kWork</span>`;
+  return `<span class="badge badge-default">${cat}</span>`;
+}
+
+function parseStat(s) {
+  const m = s.match(/\*\*(.*?)\*\*\s*(.*)/);
+  if (m) return { label: m[1], value: m[2] };
+  const parts = s.split(':');
+  return { label: parts[0].replace(/\*/g,'').trim(), value: (parts[1]||'').trim() };
+}
+
+function renderSummary(d) {
+  const el = document.getElementById('tab-summary');
+
+  // Sysinfo cards
+  let sysHtml = '<div class="section-title">System Information</div><div class="sysinfo-grid">';
+  for (const [k, v] of Object.entries(d.sysinfo || {})) {
+    sysHtml += `<div class="sysinfo-card"><div class="label">${k}</div><div class="value">${v}</div></div>`;
+  }
+  sysHtml += '</div>';
+
+  // Stat pills
+  let pillHtml = '<div class="section-title">System Stats</div><div class="stat-pills">';
+  (d.summary_stats || []).forEach(s => {
+    const colon = s.indexOf(':');
+    if (colon > -1) {
+      const label = s.slice(0, colon).trim();
+      const value = s.slice(colon + 1).trim();
+      pillHtml += `<div class="pill"><b>${label}:</b> ${value}</div>`;
+    } else {
+      pillHtml += `<div class="pill">${s}</div>`;
     }
+  });
+  pillHtml += '</div>';
 
-    function loadReport() {
-        fetch('/api/status')
-            .then(r => r.json())
-            .then(data => {
-                if (data.available) {
-                    reportAvailable = true;
+  // Top consumers table
+  let tableHtml = '<div class="section-title">Top 10 Power Consumers</div><div class="card"><table><thead><tr><th>Usage</th><th>Events/s</th><th>Category</th><th>Description</th></tr></thead><tbody>';
+  (d.top_consumers || []).forEach(r => {
+    tableHtml += `<tr>
+      <td class="mono">${r.usage}</td>
+      <td class="mono">${r.events}</td>
+      <td>${badgeCategory(r.category)}</td>
+      <td class="desc">${r.description}</td>
+    </tr>`;
+  });
+  tableHtml += '</tbody></table></div>';
 
-                    // Stop polling, start auto-refresh countdown
-                    if (pollingTimer) {
-                        clearInterval(pollingTimer);
-                        pollingTimer = null;
-                    }
+  el.innerHTML = sysHtml + pillHtml + tableHtml;
+}
 
-                    showReport();
+function renderSoftware(d) {
+  const el = document.getElementById('tab-software');
+  let html = '<div class="section-title">Software Power Consumers</div><div class="card"><table><thead><tr><th>Usage</th><th>Wakeups/s</th><th>GPU ops/s</th><th>Disk IO/s</th><th>Category</th><th>Description</th></tr></thead><tbody>';
+  (d.software || []).forEach(r => {
+    html += `<tr>
+      <td class="mono">${r.usage}</td>
+      <td class="mono">${r.wakeups}</td>
+      <td class="mono">${r.gpu_ops || '-'}</td>
+      <td class="mono">${r.disk_io || '-'}</td>
+      <td>${badgeCategory(r.category)}</td>
+      <td class="desc">${r.description}</td>
+    </tr>`;
+  });
+  html += '</tbody></table></div>';
+  el.innerHTML = html;
+}
 
-                    const d = new Date(data.lastUpdated);
-                    statusEl.className = 'live';
-                    statusEl.innerHTML = `<span></span>Last updated: ${d.toLocaleTimeString('en-GB')}`;
+function renderCpuIdle(d) {
+  const el = document.getElementById('tab-cpuidle');
+  let html = '<div class="section-title">Processor Idle States</div><div class="cpu-grid">';
 
-                    // Reset countdown
-                    countdown = REFRESH_INTERVAL;
-                } else {
-                    statusEl.className = 'loading';
-                    statusEl.innerHTML = '<span></span>Generating report...';
-                    countdownEl.textContent = '';
-                }
-            })
-            .catch(() => {
-                statusEl.className = '';
-                statusEl.innerHTML = '<span></span>Connection error';
-            });
-    }
-
-    // Poll every 2 seconds until the first report is available
-    function startPolling() {
-        pollingTimer = setInterval(() => {
-            if (!reportAvailable) {
-                loadReport();
-            }
-        }, 2000);
-    }
-
-    // Auto-refresh countdown (only ticks when report is available)
-    autoRefreshTimer = setInterval(() => {
-        if (!reportAvailable) return;
-
-        countdown--;
-        countdownEl.textContent = `Auto-refresh in: ${countdown}s`;
-
-        if (countdown <= 0) {
-            countdown = REFRESH_INTERVAL;
-            loadReport();
+  // Package
+  (d.cpuidle_package || []).forEach(t => {
+    t.headers.forEach((h, i) => {
+      if (!h || h === 'Package') return;
+      html += `<div class="cpu-card"><h4>Package ${h}</h4>`;
+      t.rows.forEach(row => {
+        const state = row[0]; const val = row[i] || '';
+        if (state && state.trim() && val.trim() && state !== '&nbsp;') {
+          html += `<div class="cpu-row"><span class="state">${state}</span><span class="pct">${val}</span></div>`;
         }
-    }, 1000);
+      });
+      html += '</div>';
+    });
+  });
 
-    // Start: direct check + polling fallback
-    loadReport();
-    startPolling();
+  // Cores
+  (d.cpuidle_cores || []).forEach(t => {
+    t.headers.forEach((h, i) => {
+      if (!h) return;
+      html += `<div class="cpu-card"><h4>${h}</h4>`;
+      t.rows.forEach(row => {
+        const state = row[0]; const val = row[i] || '';
+        if (state && state.trim() && val.trim() && state !== '&nbsp;') {
+          html += `<div class="cpu-row"><span class="state">${state}</span><span class="pct">${val}</span></div>`;
+        }
+      });
+      html += '</div>';
+    });
+  });
+
+  html += '</div>';
+  el.innerHTML = html;
+}
+
+function renderCpuFreq(d) {
+  const el = document.getElementById('tab-cpufreq');
+  let html = '<div class="section-title">Processor Frequency</div><div class="cpu-grid">';
+  (d.cpufreq || []).forEach(t => {
+    t.headers.forEach((h, i) => {
+      if (!h || h === '&nbsp;') return;
+      html += `<div class="cpu-card"><h4>${h}</h4>`;
+      t.rows.forEach(row => {
+        const val = row.cells[i] || '';
+        if (row.label && val.trim() && val !== '&nbsp;') {
+          html += `<div class="cpu-row"><span class="state">${row.label}</span><span class="pct">${val}</span></div>`;
+        }
+      });
+      html += '</div>';
+    });
+  });
+  html += '</div>';
+  el.innerHTML = html;
+}
+
+function renderDevices(d) {
+  const el = document.getElementById('tab-devices');
+  let html = '<div class="section-title">Device Info</div><div class="card"><table><thead><tr><th>Device</th><th>Status</th></tr></thead><tbody>';
+  (d.devices || []).forEach(r => {
+    html += `<tr><td>${r.name}</td><td class="mono">${r.status}</td></tr>`;
+  });
+  html += '</tbody></table></div>';
+  el.innerHTML = html;
+}
+
+function renderTuning(d) {
+  const el = document.getElementById('tab-tuning');
+  let html = '<div class="section-title">Tuning Suggestions</div><div class="card"><table><thead><tr><th>Description</th><th>Script</th><th>Status</th></tr></thead><tbody>';
+  (d.tuning || []).forEach(r => {
+    const statusClass = (r.status || '').toLowerCase().includes('good') ? 'status-good' : 'status-bad';
+    html += `<tr>
+      <td>${r.description}</td>
+      <td class="mono desc">${r.script}</td>
+      <td class="${statusClass}">${r.status}</td>
+    </tr>`;
+  });
+  html += '</tbody></table></div>';
+  el.innerHTML = html;
+}
+
+function renderAll(data) {
+  renderSummary(data);
+  renderSoftware(data);
+  renderCpuIdle(data);
+  renderCpuFreq(data);
+  renderDevices(data);
+  renderTuning(data);
+}
+
+function setStatus(state, text) {
+  const el = document.getElementById('status');
+  el.className = state;
+  document.getElementById('status-text').textContent = text;
+}
+
+function loadData() {
+  fetch('/api/data')
+    .then(r => r.json())
+    .then(resp => {
+      if (resp.available) {
+        reportAvailable = true;
+        if (pollingTimer) { clearInterval(pollingTimer); pollingTimer = null; }
+
+        renderAll(resp.data);
+
+        document.getElementById('loading').classList.add('hidden');
+        document.getElementById('main').classList.add('visible');
+
+        const d = new Date(resp.lastUpdated);
+        setStatus('live', `Last updated: ${d.toLocaleTimeString('en-GB')}`);
+        countdown = REFRESH_INTERVAL;
+      } else {
+        setStatus('loading', 'Generating report...');
+        document.getElementById('countdown').textContent = '';
+      }
+    })
+    .catch(() => setStatus('', 'Connection error'));
+}
+
+// Countdown
+setInterval(() => {
+  if (!reportAvailable) return;
+  countdown--;
+  document.getElementById('countdown').textContent = `Auto-refresh in: ${countdown}s`;
+  if (countdown <= 0) { countdown = REFRESH_INTERVAL; loadData(); }
+}, 1000);
+
+// Poll every 2s until first report
+function startPolling() {
+  pollingTimer = setInterval(() => { if (!reportAvailable) loadData(); }, 2000);
+}
+
+loadData();
+startPolling();
 </script>
-
 </body>
 </html>
