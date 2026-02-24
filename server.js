@@ -11,7 +11,20 @@ app.use(express.static(path.join(__dirname, 'public')));
 app.get('/report', (req, res) => {
     if (fs.existsSync(REPORT_PATH)) {
         const html = fs.readFileSync(REPORT_PATH, 'utf8');
-        res.send(html);
+        res.send(`
+<style>
+body {
+    background-color: #0f172a !important;
+    color: #e2e8f0 !important;
+}
+td, th {
+    background-color: #1e293b !important;
+    color: #e2e8f0 !important;
+}
+a { color: #38bdf8 !important; }
+</style>
+${html}
+`);
     } else {
         res.status(202).send('<p>Generating report.. (~20 seconds)</p>');
     }
