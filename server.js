@@ -13,7 +13,7 @@ app.get('/report', (req, res) => {
         const html = fs.readFileSync(REPORT_PATH, 'utf8');
         res.send(html);
     } else {
-        res.status(202).send('<p>PowerTop rapport wordt nog gegenereerd, even geduld... (duurt ~20 seconden)</p>');
+        res.status(202).send('<p>PowerTop rapport is being generated, please wait... (~20 seconds)</p>');
     }
 });
 
@@ -30,5 +30,5 @@ app.get('/api/status', (req, res) => {
 });
 
 app.listen(PORT, () => {
-    console.log(`PowerTop web interface draait op http://0.0.0.0:${PORT}`);
+    console.log(`PowerTop web interface running on http://0.0.0.0:${PORT}`);
 });
