@@ -13,7 +13,7 @@ app.get('/report', (req, res) => {
         const html = fs.readFileSync(REPORT_PATH, 'utf8');
         res.send(html);
     } else {
-        res.status(202).send('<p>PowerTop rapport is being generated, please wait... (~20 seconds)</p>');
+        res.status(202).send('<p>Generating report.. (~20 seconds)</p>');
     }
 });
 
