@@ -5,7 +5,7 @@ const cheerio = require('cheerio');
 
 const app = express();
 const PORT = 3000;
-const REPORT_PATH = '/app/report.html';
+const REPORT_PATH = '/tmp/powertop/report.html';
 
 app.use(express.static('public'));
 
