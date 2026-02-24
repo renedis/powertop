@@ -1,5 +1,5 @@
 <!DOCTYPE html>
-<html lang="nl">
+<html lang="en">
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
@@ -23,17 +23,27 @@
             align-items: center;
             justify-content: space-between;
             border-bottom: 1px solid #334155;
+            gap: 16px;
         }
 
         header h1 {
             font-size: 1.2rem;
             font-weight: 600;
             color: #38bdf8;
+            white-space: nowrap;
+        }
+
+        .header-right {
+            display: flex;
+            align-items: center;
+            gap: 20px;
+            margin-left: auto;
         }
 
         #status {
             font-size: 0.8rem;
             color: #94a3b8;
+            white-space: nowrap;
         }
 
         #status span {
@@ -46,8 +56,14 @@
             vertical-align: middle;
         }
 
-        #status.live span { background: #22c55e; }
+        #status.live span  { background: #22c55e; }
         #status.loading span { background: #f59e0b; }
+
+        #countdown {
+            font-size: 0.8rem;
+            color: #64748b;
+            white-space: nowrap;
+        }
 
         #refresh-btn {
             background: #334155;
@@ -57,20 +73,17 @@
             border-radius: 6px;
             cursor: pointer;
             font-size: 0.85rem;
+            white-space: nowrap;
         }
 
         #refresh-btn:hover { background: #475569; }
-
-        #countdown {
-            font-size: 0.8rem;
-            color: #64748b;
-        }
 
         #report-frame {
             flex: 1;
             width: 100%;
             border: none;
-            background: #fff;
+            background: #0f172a;
+            display: none;
         }
 
         #loading-overlay {
@@ -81,6 +94,7 @@
             justify-content: center;
             gap: 16px;
             color: #94a3b8;
+            background: #0f172a;
         }
 
         .spinner {
@@ -99,19 +113,19 @@
 
 <header>
     <h1>⚡ PowerTop</h1>
-    <div id="status"><span></span>Waiting for report...</div>
-    <div>
-        <span id="countdown"></span>
+    <div class="header-right">
+        <div id="status"><span></span>Waiting for report...</div>
+        <div id="countdown"></div>
         <button id="refresh-btn" onclick="loadReport()">↻ Refresh</button>
     </div>
 </header>
 
 <div id="loading-overlay">
     <div class="spinner"></div>
-    <p>Generating report (~20 seconds)...</p>
+    <p>Generating PowerTop report (~20 seconds)...</p>
 </div>
 
-<iframe id="report-frame" style="display:none;" src="/report"></iframe>
+<iframe id="report-frame" src=""></iframe>
 
 <script>
     const frame = document.getElementById('report-frame');
@@ -119,49 +133,76 @@
     const statusEl = document.getElementById('status');
     const countdownEl = document.getElementById('countdown');
 
-    let refreshInterval = 60;
-    let countdown = refreshInterval;
+    const REFRESH_INTERVAL = 60;
+    let countdown = REFRESH_INTERVAL;
+    let reportAvailable = false;
+    let autoRefreshTimer = null;
+    let pollingTimer = null;
+
+    function showReport() {
+        frame.src = '/report?' + Date.now();
+        frame.style.display = 'block';
+        overlay.style.display = 'none';
+    }
 
     function loadReport() {
         fetch('/api/status')
             .then(r => r.json())
             .then(data => {
                 if (data.available) {
-                    frame.src = '/report?' + Date.now();
-                    frame.style.display = 'block';
-                    overlay.style.display = 'none';
-                    statusEl.className = 'live';
+                    reportAvailable = true;
+
+                    // Stop polling, start auto-refresh countdown
+                    if (pollingTimer) {
+                        clearInterval(pollingTimer);
+                        pollingTimer = null;
+                    }
+
+                    showReport();
+
                     const d = new Date(data.lastUpdated);
-                    statusEl.innerHTML = `<span></span>Last updated: ${d.toLocaleTimeString('nl-NL')}`;
-                    countdown = refreshInterval;
+                    statusEl.className = 'live';
+                    statusEl.innerHTML = `<span></span>Last updated: ${d.toLocaleTimeString('en-GB')}`;
+
+                    // Reset countdown
+                    countdown = REFRESH_INTERVAL;
                 } else {
                     statusEl.className = 'loading';
-                    statusEl.innerHTML = '<span></span>Generating report..';
+                    statusEl.innerHTML = '<span></span>Generating report...';
+                    countdownEl.textContent = '';
                 }
             })
             .catch(() => {
+                statusEl.className = '';
                 statusEl.innerHTML = '<span></span>Connection error';
             });
     }
 
-    setInterval(() => {
+    // Poll every 2 seconds until the first report is available
+    function startPolling() {
+        pollingTimer = setInterval(() => {
+            if (!reportAvailable) {
+                loadReport();
+            }
+        }, 2000);
+    }
+
+    // Auto-refresh countdown (only ticks when report is available)
+    autoRefreshTimer = setInterval(() => {
+        if (!reportAvailable) return;
+
         countdown--;
         countdownEl.textContent = `Auto-refresh in: ${countdown}s`;
+
         if (countdown <= 0) {
-            countdown = refreshInterval;
+            countdown = REFRESH_INTERVAL;
             loadReport();
         }
     }, 1000);
 
+    // Start: direct check + polling fallback
     loadReport();
-
-    setInterval(() => {
-        fetch('/api/status')
-            .then(r => r.json())
-            .then(data => {
-                if (!data.available) loadReport();
-            });
-    }, 5000);
+    startPolling();
 </script>
 
 </body>
