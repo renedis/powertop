@@ -1,254 +1,466 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>PowerTop WebGUI</title>
-    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
-    <style>
-        :root {
-            --bg-dark: #0f111a;
-            --panel-bg: #1a1d2b;
-            --accent: #00d1b2;
-            --text-main: #e0e0e0;
-            --text-dim: #a0a0a0;
-            --border: #2d324a;
-        }
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>PowerTop</title>
+<style>
+  :root {
+    --bg:        #0f172a;
+    --surface:   #1e293b;
+    --surface2:  #273549;
+    --border:    #334155;
+    --text:      #e2e8f0;
+    --muted:     #94a3b8;
+    --accent:    #38bdf8;
+    --green:     #22c55e;
+    --yellow:    #f59e0b;
+    --red:       #ef4444;
+    --purple:    #a78bfa;
+  }
 
-        body {
-            background-color: var(--bg-dark);
-            color: var(--text-main);
-            font-family: 'Segoe UI', Roboto, Helvetica, Arial, sans-serif;
-        }
+  * { margin:0; padding:0; box-sizing:border-box; }
 
-        .navbar {
-            background-color: var(--panel-bg) !important;
-            border-bottom: 1px solid var(--border);
-            padding: 0.5rem 1rem;
-        }
+  body {
+    background: var(--bg);
+    color: var(--text);
+    font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+    font-size: 13px;
+    height: 100vh;
+    display: flex;
+    flex-direction: column;
+    overflow: hidden;
+  }
 
-        .navbar-brand {
-            font-weight: bold;
-            color: var(--accent) !important;
-            display: flex;
-            align-items: center;
-            gap: 10px;
-        }
+  header {
+    background: var(--surface);
+    border-bottom: 1px solid var(--border);
+    padding: 10px 20px;
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    flex-shrink: 0;
+  }
+  header h1 { font-size: 1.1rem; font-weight: 700; color: var(--accent); white-space: nowrap; }
+  .header-right { display: flex; align-items: center; gap: 16px; margin-left: auto; }
+  #status { font-size: 0.78rem; color: var(--muted); display: flex; align-items: center; gap: 6px; white-space: nowrap; }
+  #status .dot { width:8px; height:8px; border-radius:50%; background: var(--border); flex-shrink:0; }
+  #status.live .dot  { background: var(--green); }
+  #status.loading .dot { background: var(--yellow); }
+  #countdown { font-size: 0.78rem; color: var(--muted); white-space: nowrap; }
+  #refresh-btn {
+    background: var(--surface2); color: var(--text); border: 1px solid var(--border);
+    padding: 5px 12px; border-radius: 6px; cursor: pointer; font-size: 0.8rem;
+  }
+  #refresh-btn:hover { background: var(--border); }
 
-        /* Badge Styling */
-        #package-badges {
-            display: flex;
-            gap: 8px;
-            flex-wrap: wrap;
-            justify-content: center;
-        }
+  nav {
+    background: var(--surface);
+    border-bottom: 1px solid var(--border);
+    display: flex;
+    gap: 2px;
+    padding: 0 20px;
+    flex-shrink: 0;
+    overflow-x: auto;
+  }
+  nav button {
+    background: none; border: none; color: var(--muted);
+    padding: 10px 14px; cursor: pointer; font-size: 0.82rem; font-weight: 500;
+    border-bottom: 2px solid transparent; white-space: nowrap;
+    transition: color .15s, border-color .15s;
+  }
+  nav button:hover { color: var(--text); }
+  nav button.active { color: var(--accent); border-bottom-color: var(--accent); }
 
-        .c-state-badge {
-            background: rgba(0, 209, 178, 0.1);
-            border: 1px solid var(--accent);
-            color: var(--accent);
-            padding: 2px 8px;
-            border-radius: 4px;
-            font-size: 0.75rem;
-            font-family: monospace;
-            white-space: nowrap;
-        }
+  main {
+    flex: 1;
+    overflow-y: auto;
+    padding: 20px;
+    display: none;
+  }
+  main.visible { display: block; }
 
-        .nav-link {
-            color: var(--text-dim) !important;
-            border-bottom: 2px solid transparent;
-            transition: all 0.3s;
-            cursor: pointer;
-        }
+  #loading {
+    flex: 1;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    gap: 14px;
+    color: var(--muted);
+  }
+  #loading.hidden { display: none; }
+  .spinner {
+    width: 36px; height: 36px;
+    border: 3px solid var(--border);
+    border-top-color: var(--accent);
+    border-radius: 50%;
+    animation: spin 1s linear infinite;
+  }
+  @keyframes spin { to { transform: rotate(360deg); } }
 
-        .nav-link.active {
-            color: var(--accent) !important;
-            border-bottom: 2px solid var(--accent);
-        }
+  .tab-panel { display: none; }
+  .tab-panel.active { display: block; }
 
-        .main-container {
-            padding: 2rem;
-            max-width: 1400px;
-            margin: 0 auto;
-        }
+  .sysinfo-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
+    gap: 12px;
+    margin-bottom: 20px;
+  }
+  .sysinfo-card {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 8px;
+    padding: 14px 16px;
+  }
+  .sysinfo-card .label { font-size: 0.72rem; color: var(--muted); text-transform: uppercase; letter-spacing: .05em; margin-bottom: 4px; }
+  .sysinfo-card .value { font-size: 0.9rem; color: var(--text); font-weight: 500; word-break: break-word; }
 
-        .panel {
-            background: var(--panel-bg);
-            border: 1px solid var(--border);
-            border-radius: 8px;
-            padding: 1.5rem;
-            margin-bottom: 2rem;
-            box-shadow: 0 4px 15px rgba(0,0,0,0.3);
-        }
+  .stat-pills { display: flex; flex-wrap: wrap; gap: 8px; margin-bottom: 20px; }
+  .pill {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 20px;
+    padding: 5px 14px;
+    font-size: 0.8rem;
+    color: var(--text);
+  }
+  .pill b { color: var(--accent); }
 
-        h4 {
-            color: var(--accent);
-            margin-bottom: 1.5rem;
-            font-weight: 300;
-            text-transform: uppercase;
-            letter-spacing: 1px;
-        }
+  .section-title {
+    font-size: 0.72rem;
+    font-weight: 700;
+    text-transform: uppercase;
+    letter-spacing: .08em;
+    color: var(--muted);
+    margin-bottom: 10px;
+    margin-top: 20px;
+  }
+  .section-title:first-child { margin-top: 0; }
 
-        table {
-            width: 100%;
-            border-collapse: collapse;
-            font-size: 0.9rem;
-        }
+  .card {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 8px;
+    overflow: hidden;
+    margin-bottom: 16px;
+  }
+  table { width: 100%; border-collapse: collapse; }
+  thead th {
+    background: var(--surface2);
+    color: var(--muted);
+    font-size: 0.72rem;
+    font-weight: 600;
+    text-transform: uppercase;
+    letter-spacing: .05em;
+    padding: 8px 12px;
+    text-align: left;
+    border-bottom: 1px solid var(--border);
+  }
+  tbody tr { border-bottom: 1px solid var(--border); }
+  tbody tr:last-child { border-bottom: none; }
+  tbody tr:hover { background: var(--surface2); }
+  tbody td { padding: 7px 12px; color: var(--text); vertical-align: top; }
+  td.mono { font-family: 'SF Mono', 'Fira Code', monospace; font-size: 0.78rem; }
+  td.desc { max-width: 500px; word-break: break-all; font-size: 0.78rem; color: var(--muted); }
 
-        th {
-            text-align: left;
-            color: var(--text-dim);
-            border-bottom: 1px solid var(--border);
-            padding: 10px;
-            font-weight: 500;
-        }
+  .badge {
+    display: inline-block;
+    padding: 2px 8px;
+    border-radius: 4px;
+    font-size: 0.7rem;
+    font-weight: 600;
+    text-transform: uppercase;
+  }
+  .badge-timer    { background: #1e3a5f; color: #60a5fa; }
+  .badge-process  { background: #1a3a2a; color: #4ade80; }
+  .badge-interrupt{ background: #3b2a1a; color: #fb923c; }
+  .badge-kwork    { background: #2d1a3b; color: var(--purple); }
+  .badge-default  { background: var(--surface2); color: var(--muted); }
 
-        td {
-            padding: 10px;
-            border-bottom: 1px solid rgba(255,255,255,0.05);
-        }
+  .status-good { color: var(--green); font-weight: 600; }
+  .status-bad  { color: var(--red);   font-weight: 600; }
 
-        tr:hover {
-            background: rgba(255,255,255,0.02);
-        }
+  .cpu-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(200px, 1fr)); gap: 12px; }
+  .cpu-card {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 8px;
+    padding: 12px;
+  }
+  .cpu-card h4 { font-size: 0.78rem; color: var(--accent); margin-bottom: 8px; font-weight: 600; }
+  .cpu-row { display: flex; justify-content: space-between; padding: 3px 0; border-bottom: 1px solid var(--border); font-size: 0.78rem; }
+  .cpu-row:last-child { border-bottom: none; }
+  .cpu-row .state { color: var(--muted); }
+  .cpu-row .pct   { color: var(--text); font-weight: 500; font-family: monospace; }
 
-        .status-good { color: #48c774; }
-        .status-bad { color: #ff3860; }
-
-        .loading-overlay {
-            position: fixed;
-            top: 0; left: 0; width: 100%; height: 100%;
-            background: var(--bg-dark);
-            display: flex;
-            flex-direction: column;
-            justify-content: center;
-            align-items: center;
-            z-index: 9999;
-        }
-
-        .spinner-border { width: 3rem; height: 3rem; color: var(--accent); }
-    </style>
+  ::-webkit-scrollbar { width: 6px; height: 6px; }
+  ::-webkit-scrollbar-track { background: var(--bg); }
+  ::-webkit-scrollbar-thumb { background: var(--border); border-radius: 3px; }
+</style>
 </head>
 <body>
 
-    <div id="loading" class="loading-overlay">
-        <div class="spinner-border" role="status"></div>
-        <p class="mt-3">Waiting for PowerTop report (approx. 20s)...</p>
-    </div>
+<header>
+  <h1>⚡ PowerTop</h1>
+  <div class="header-right">
+    <div id="status"><span class="dot"></span><span id="status-text">Waiting for report...</span></div>
+    <div id="countdown"></div>
+    <button id="refresh-btn" onclick="loadData()">↻ Refresh</button>
+  </div>
+</header>
 
-    <nav class="navbar navbar-expand-lg sticky-top">
-        <div class="container-fluid">
-            <span class="navbar-brand">⚡ PowerTop</span>
-            
-            <!-- Badges Container -->
-            <div id="package-badges" class="mx-auto"></div>
+<nav id="navbar"></nav>
 
-            <div class="d-flex align-items-center">
-                <span id="last-update" class="text-muted small me-3"></span>
-                <ul class="navbar-nav flex-row gap-3">
-                    <li class="nav-item"><a class="nav-link active" onclick="showPanel('summary')">Summary</a></li>
-                    <li class="nav-item"><a class="nav-link" onclick="showPanel('cpu')">CPU</a></li>
-                    <li class="nav-item"><a class="nav-link" onclick="showPanel('software')">Software</a></li>
-                    <li class="nav-item"><a class="nav-link" onclick="showPanel('devices')">Devices</a></li>
-                    <li class="nav-item"><a class="nav-link" onclick="showPanel('tuning')">Tuning</a></li>
-                </ul>
-            </div>
-        </div>
-    </nav>
+<div id="loading">
+  <div class="spinner"></div>
+  <p>Generating PowerTop report (~20 seconds)...</p>
+</div>
 
-    <div class="main-container">
-        <div id="content">
-            <!-- Panels will be injected here -->
-        </div>
-    </div>
+<main id="main">
+  <div id="tab-summary"   class="tab-panel"></div>
+  <div id="tab-software"  class="tab-panel"></div>
+  <div id="tab-cpuidle"   class="tab-panel"></div>
+  <div id="tab-cpufreq"   class="tab-panel"></div>
+  <div id="tab-devices"   class="tab-panel"></div>
+  <div id="tab-tuning"    class="tab-panel"></div>
+</main>
 
-    <script>
-        let currentData = null;
+<script>
+const REFRESH_INTERVAL = 60;
+let countdown = REFRESH_INTERVAL;
+let reportAvailable = false;
+let pollingTimer = null;
+let activeTab = 'summary';
 
-        async function fetchData() {
-            try {
-                const response = await fetch('/api/data');
-                if (!response.ok) throw new Error('Not ready');
-                currentData = await response.json();
-                document.getElementById('loading').style.display = 'none';
-                renderBadges();
-                renderCurrentPanel();
-                document.getElementById('last-update').innerText = `Last updated: ${currentData.last_updated}`;
-            } catch (e) {
-                console.log("Waiting for data...");
-            }
+const tabs = [
+  { id: 'summary',  label: 'Summary' },
+  { id: 'software', label: 'Software Info' },
+  { id: 'cpuidle',  label: 'CPU Idle' },
+  { id: 'cpufreq',  label: 'CPU Frequency' },
+  { id: 'devices',  label: 'Device Info' },
+  { id: 'tuning',   label: 'Tuning' },
+];
+
+const navbar = document.getElementById('navbar');
+tabs.forEach(t => {
+  const btn = document.createElement('button');
+  btn.textContent = t.label;
+  btn.dataset.tab = t.id;
+  btn.onclick = () => switchTab(t.id);
+  navbar.appendChild(btn);
+});
+
+function switchTab(id) {
+  activeTab = id;
+  document.querySelectorAll('nav button').forEach(b => b.classList.toggle('active', b.dataset.tab === id));
+  document.querySelectorAll('.tab-panel').forEach(p => p.classList.toggle('active', p.id === 'tab-' + id));
+}
+switchTab('summary');
+
+function badgeCategory(cat) {
+  const c = (cat || '').toLowerCase();
+  if (c === 'timer')     return `<span class="badge badge-timer">Timer</span>`;
+  if (c === 'process')   return `<span class="badge badge-process">Process</span>`;
+  if (c === 'interrupt') return `<span class="badge badge-interrupt">IRQ</span>`;
+  if (c === 'kwork')     return `<span class="badge badge-kwork">kWork</span>`;
+  return `<span class="badge badge-default">${cat}</span>`;
+}
+
+function parseStat(s) {
+  const m = s.match(/\*\*(.*?)\*\*\s*(.*)/);
+  if (m) return { label: m[1], value: m[2] };
+  const parts = s.split(':');
+  return { label: parts[0].replace(/\*/g,'').trim(), value: (parts[1]||'').trim() };
+}
+
+function renderSummary(d) {
+  const el = document.getElementById('tab-summary');
+
+  let sysHtml = '<div class="section-title">System Information</div><div class="sysinfo-grid">';
+  for (const [k, v] of Object.entries(d.sysinfo || {})) {
+    sysHtml += `<div class="sysinfo-card"><div class="label">${k}</div><div class="value">${v}</div></div>`;
+  }
+  sysHtml += '</div>';
+
+  let pillHtml = '<div class="section-title">System Stats</div><div class="stat-pills">';
+  (d.summary_stats || []).forEach(s => {
+    const colon = s.indexOf(':');
+    if (colon > -1) {
+      const label = s.slice(0, colon).trim();
+      const value = s.slice(colon + 1).trim();
+      pillHtml += `<div class="pill"><b>${label}:</b> ${value}</div>`;
+    } else {
+      pillHtml += `<div class="pill">${s}</div>`;
+    }
+  });
+  pillHtml += '</div>';
+
+  let tableHtml = '<div class="section-title">Top 10 Power Consumers</div><div class="card"><table><thead><tr><th>Usage</th><th>Events/s</th><th>Category</th><th>Description</th></tr></thead><tbody>';
+  (d.top_consumers || []).forEach(r => {
+    tableHtml += `<tr>
+      <td class="mono">${r.usage}</td>
+      <td class="mono">${r.events}</td>
+      <td>${badgeCategory(r.category)}</td>
+      <td class="desc">${r.description}</td>
+    </tr>`;
+  });
+  tableHtml += '</tbody></table></div>';
+
+  el.innerHTML = sysHtml + pillHtml + tableHtml;
+}
+
+function renderSoftware(d) {
+  const el = document.getElementById('tab-software');
+  let html = '<div class="section-title">Software Power Consumers</div><div class="card"><table><thead><tr><th>Usage</th><th>Wakeups/s</th><th>GPU ops/s</th><th>Disk IO/s</th><th>Category</th><th>Description</th></tr></thead><tbody>';
+  (d.software || []).forEach(r => {
+    html += `<tr>
+      <td class="mono">${r.usage}</td>
+      <td class="mono">${r.wakeups}</td>
+      <td class="mono">${r.gpu_ops || '-'}</td>
+      <td class="mono">${r.disk_io || '-'}</td>
+      <td>${badgeCategory(r.category)}</td>
+      <td class="desc">${r.description}</td>
+    </tr>`;
+  });
+  html += '</tbody></table></div>';
+  el.innerHTML = html;
+}
+
+function renderCpuIdle(d) {
+  const el = document.getElementById('tab-cpuidle');
+  let html = '<div class="section-title">Processor Idle States</div><div class="cpu-grid">';
+
+  (d.cpuidle_package || []).forEach(t => {
+    t.headers.forEach((h, i) => {
+      if (!h || h === 'Package') return;
+      html += `<div class="cpu-card"><h4>Package ${h}</h4>`;
+      t.rows.forEach(row => {
+        const state = row[0]; const val = row[i] || '';
+        if (state && state.trim() && val.trim() && state !== '&nbsp;') {
+          html += `<div class="cpu-row"><span class="state">${state}</span><span class="pct">${val}</span></div>`;
         }
+      });
+      html += '</div>';
+    });
+  });
 
-        function renderBadges() {
-            const container = document.getElementById('package-badges');
-            container.innerHTML = '';
-            if (currentData.package_stats) {
-                currentData.package_stats.forEach(stat => {
-                    const span = document.createElement('span');
-                    span.className = 'c-state-badge';
-                    span.innerText = stat;
-                    container.appendChild(span);
-                });
-            }
+  (d.cpuidle_cores || []).forEach(t => {
+    t.headers.forEach((h, i) => {
+      if (!h) return;
+      html += `<div class="cpu-card"><h4>${h}</h4>`;
+      t.rows.forEach(row => {
+        const state = row[0]; const val = row[i] || '';
+        if (state && state.trim() && val.trim() && state !== '&nbsp;') {
+          html += `<div class="cpu-row"><span class="state">${state}</span><span class="pct">${val}</span></div>`;
         }
+      });
+      html += '</div>';
+    });
+  });
 
-        function showPanel(id) {
-            document.querySelectorAll('.nav-link').forEach(l => l.classList.remove('active'));
-            event.target.classList.add('active');
-            window.currentActivePanel = id;
-            renderCurrentPanel();
+  html += '</div>';
+  el.innerHTML = html;
+}
+
+function renderCpuFreq(d) {
+  const el = document.getElementById('tab-cpufreq');
+  let html = '<div class="section-title">Processor Frequency</div><div class="cpu-grid">';
+  (d.cpufreq || []).forEach(t => {
+    t.headers.forEach((h, i) => {
+      if (!h || h === '&nbsp;') return;
+      html += `<div class="cpu-card"><h4>${h}</h4>`;
+      t.rows.forEach(row => {
+        const val = row.cells[i] || '';
+        if (row.label && val.trim() && val !== '&nbsp;') {
+          html += `<div class="cpu-row"><span class="state">${row.label}</span><span class="pct">${val}</span></div>`;
         }
+      });
+      html += '</div>';
+    });
+  });
+  html += '</div>';
+  el.innerHTML = html;
+}
 
-        function renderCurrentPanel() {
-            const id = window.currentActivePanel || 'summary';
-            const container = document.getElementById('content');
-            let html = '';
+function renderDevices(d) {
+  const el = document.getElementById('tab-devices');
+  let html = '<div class="section-title">Device Info</div><div class="card"><table><thead><tr><th>Device</th><th>Status</th></tr></thead><tbody>';
+  (d.devices || []).forEach(r => {
+    html += `<tr><td>${r.name}</td><td class="mono">${r.status}</td></tr>`;
+  });
+  html += '</tbody></table></div>';
+  el.innerHTML = html;
+}
 
-            if (id === 'summary') {
-                html = `<div class="panel"><h4>System Summary</h4><table>`;
-                currentData.summary.forEach(item => {
-                    html += `<tr><td>${item.label}</td><td class="text-end fw-bold">${item.value}</td></tr>`;
-                });
-                html += `</table></div>`;
-            } 
-            else if (id === 'cpu') {
-                html = `<div class="panel"><h4>CPU Idle States</h4>${createTable(currentData.cpu_idle)}</div>`;
-                html += `<div class="panel"><h4>CPU Frequency Stats</h4>${createTable(currentData.cpu_freq)}</div>`;
-            }
-            else if (id === 'software') {
-                html = `<div class="panel"><h4>Software Settings</h4>${createTable(currentData.software)}</div>`;
-            }
-            else if (id === 'devices') {
-                html = `<div class="panel"><h4>Device Power Report</h4>${createTable(currentData.devices)}</div>`;
-            }
-            else if (id === 'tuning') {
-                html = `<div class="panel"><h4>Tuning Recommendations</h4>${createTable(currentData.tuning)}</div>`;
-            }
+function renderTuning(d) {
+  const el = document.getElementById('tab-tuning');
+  let html = '<div class="section-title">Tuning Suggestions</div><div class="card"><table><thead><tr><th>Description</th><th>Script</th><th>Status</th></tr></thead><tbody>';
+  (d.tuning || []).forEach(r => {
+    const statusClass = (r.status || '').toLowerCase().includes('good') ? 'status-good' : 'status-bad';
+    html += `<tr>
+      <td>${r.description}</td>
+      <td class="mono desc">${r.script}</td>
+      <td class="${statusClass}">${r.status}</td>
+    </tr>`;
+  });
+  html += '</tbody></table></div>';
+  el.innerHTML = html;
+}
 
-            container.innerHTML = html;
-        }
+function renderAll(data) {
+  renderSummary(data);
+  renderSoftware(data);
+  renderCpuIdle(data);
+  renderCpuFreq(data);
+  renderDevices(data);
+  renderTuning(data);
+}
 
-        function createTable(data) {
-            if (!data || data.length === 0) return '<p class="text-muted">No data available in this section.</p>';
-            let html = '<table><thead><tr>';
-            data[0].forEach(h => html += `<th>${h}</th>`);
-            html += '</tr></thead><tbody>';
-            for (let i = 1; i < data.length; i++) {
-                html += '<tr>';
-                data[i].forEach(cell => {
-                    let cls = '';
-                    if (cell === 'Good') cls = 'status-good';
-                    if (cell === 'Bad') cls = 'status-bad';
-                    html += `<td class="${cls}">${cell}</td>`;
-                });
-                html += '</tr>';
-            }
-            html += '</tbody></table>';
-            return html;
-        }
+function setStatus(state, text) {
+  const el = document.getElementById('status');
+  el.className = state;
+  document.getElementById('status-text').textContent = text;
+}
 
-        setInterval(fetchData, 5000);
-        fetchData();
-    </script>
+function loadData() {
+  fetch('/api/data')
+    .then(r => r.json())
+    .then(resp => {
+      if (resp.available) {
+        reportAvailable = true;
+        if (pollingTimer) { clearInterval(pollingTimer); pollingTimer = null; }
+
+        renderAll(resp.data);
+
+        document.getElementById('loading').classList.add('hidden');
+        document.getElementById('main').classList.add('visible');
+
+        const d = new Date(resp.lastUpdated);
+        setStatus('live', `Last updated: ${d.toLocaleTimeString('en-GB')}`);
+        countdown = REFRESH_INTERVAL;
+      } else {
+        setStatus('loading', 'Generating report...');
+        document.getElementById('countdown').textContent = '';
+      }
+    })
+    .catch(() => setStatus('', 'Connection error'));
+}
+
+setInterval(() => {
+  if (!reportAvailable) return;
+  countdown--;
+  document.getElementById('countdown').textContent = `Auto-refresh in: ${countdown}s`;
+  if (countdown <= 0) { countdown = REFRESH_INTERVAL; loadData(); }
+}, 1000);
+
+function startPolling() {
+  pollingTimer = setInterval(() => { if (!reportAvailable) loadData(); }, 2000);
+}
+
+loadData();
+startPolling();
+</script>
 </body>
 </html>
