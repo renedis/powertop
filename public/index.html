@@ -384,7 +384,7 @@ function renderDevices(d) {
   let html = '<div class="section-title">Device Info</div><div class="card"><table><thead><tr><th>Usage</th><th>Device</th></tr></thead><tbody>';
   (d.devices || []).forEach(r => {
     const is100 = r.name.trim().startsWith('100');
-    const badge = is100 ? '<span class="badge badge-100">' + r.name + '</span>' : `<span class="mono">${r.name}</span>`;
+    const badge = is100 ? '<span class="badge badge-100">' + r.name + '</span>' : '<span class="badge badge-default">' + r.name + '</span>';
     html += `<tr><td>${badge}</td><td>${r.status}</td></tr>`;
   });
   html += '</tbody></table></div>';
