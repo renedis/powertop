@@ -19,9 +19,15 @@ function parseReport() {
 
     result.sysinfo = {};
     $('table.emphasis1 tr').each((i, row) => {
-        const key = $(row).find('th').text().trim();
+        let key = $(row).find('th').text().trim();
         const val = $(row).find('td').text().trim();
-        if (key && val) result.sysinfo[key] = val;
+        // Label OS field as Container OS since powertop reads the container's /etc/os-release
+        if (key && val) {
+            if (key.toLowerCase() === 'os' || key.toLowerCase() === 'operating system') {
+                key = 'Container OS';
+            }
+            result.sysinfo[key] = val;
+        }
     });
 
     result.summary_stats = [];
@@ -69,14 +75,15 @@ function parseReport() {
     result.tuning = {};
     const tuningDiv = $('#tuning');
     let currentCategory = 'Uncategorized';
-    tuningDiv.children().each((i, el) => {
-        const tag = el.tagName;
+    // Use find() for h2 and table elements rather than children() which can be unreliable
+    tuningDiv.find('h2, table').each((i, el) => {
+        const tag = el.tagName.toLowerCase();
         if (tag === 'h2') {
             currentCategory = $(el).text().trim();
             if (!result.tuning[currentCategory]) result.tuning[currentCategory] = [];
         } else if (tag === 'table') {
             if (!result.tuning[currentCategory]) result.tuning[currentCategory] = [];
-            $(el).find('tr.tune').each((j, row) => {
+            $(el).find('tr.tune, tr.emph1').each((j, row) => {
                 const cells = $(row).find('td').map((k, td) => $(td).text().trim()).get();
                 if (cells.length >= 3) {
                     result.tuning[currentCategory].push({
@@ -113,13 +120,26 @@ function parseReport() {
 
     result.cpufreq = [];
     $('#cpufreq table.emphasis2').each((i, table) => {
-        const headers = $(table).find('th.title').map((j, th) => $(th).text().trim()).get().filter(Boolean);
+        // First row of th.title elements = column headers
+        const firstRow = $(table).find('tr').first();
+        const headers = firstRow.find('th.title').map((j, th) => $(th).text().trim()).get();
         const rows = [];
+        // Subsequent rows: first th.title is row label, td elements are values
         $(table).find('tr').each((j, row) => {
-            const label = $(row).find('th.title').first().text().trim();
-            const cells = $(row).find('td').map((k, td) => $(td).text().trim()).get();
-            if (label && cells.length) rows.push({ label, cells });
+            if (j === 0) return; // skip header row
+            const thElements = $(row).find('th.title');
+            const label = thElements.first().text().trim();
+            const cells = $(row).find('td').map((k, td) => {
+                const text = $(td).text().trim();
+                // Filter out &nbsp; and empty cells
+                return (text && text !== '\u00a0' && text !== '&nbsp;') ? text : '';
+            }).get();
+            // Only include rows that have a label and at least one non-empty cell
+            if (label && label !== '\u00a0' && cells.some(c => c !== '')) {
+                rows.push({ label, cells });
+            }
         });
+        // Only include tables with actual data rows
         if (rows.length) result.cpufreq.push({ headers, rows });
     });
 

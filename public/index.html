@@ -373,19 +373,27 @@ function renderCpuFreq(d) {
   const el = document.getElementById('tab-cpufreq');
   let html = '<div class="section-title">Processor Frequency</div><div class="cpu-grid">';
   (d.cpufreq || []).forEach(t => {
-    t.headers.forEach((h, i) => {
-      if (!h || h === '&nbsp;') return;
-      html += `<div class="cpu-card"><h4>${h}</h4>`;
+    // headers[0] is the table label (Package, Core, or &nbsp;), headers[1..n] are column names
+    // rows have { label, cells } where cells[0] maps to headers[1], cells[1] to headers[2], etc.
+    for (let i = 1; i < t.headers.length; i++) {
+      const colName = t.headers[i];
+      if (!colName || colName === '\u00a0') continue;
+      // Build card title: if headers[0] is meaningful, prefix it
+      const prefix = (t.headers[0] && t.headers[0] !== '\u00a0' && t.headers[0] !== '&nbsp;') ? t.headers[0] + ' ' : '';
+      html += `<div class="cpu-card"><h4>${prefix}${colName}</h4>`;
       t.rows.forEach(row => {
-        const val = row.cells[i] || '';
-        if (row.label && val.trim() && val !== '&nbsp;') {
+        const val = row.cells[i - 1] || '';
+        if (row.label && val.trim()) {
           html += `<div class="cpu-row"><span class="state">${row.label}</span><span class="pct">${val}</span></div>`;
         }
       });
       html += '</div>';
-    });
+    }
   });
   html += '</div>';
+  if (html === '<div class="section-title">Processor Frequency</div><div class="cpu-grid"></div>') {
+    html = '<div class="section-title">Processor Frequency</div><p style="color:var(--muted)">No frequency data available.</p>';
+  }
   el.innerHTML = html;
 }
 
@@ -401,7 +409,8 @@ function renderDevices(d) {
 
 function renderTuning(d) {
   const el = document.getElementById('tab-tuning');
-  const tuning = d.tuning || {};
+  // Guard: if tuning is an array (shouldn't happen now), treat as empty
+  const tuning = (d.tuning && !Array.isArray(d.tuning)) ? d.tuning : {};
   const categories = Object.keys(tuning);
 
   if (categories.length === 0) {
