@@ -136,22 +136,23 @@ function parseReport() {
     result.cpufreq = [];
 
     $('#cpufreq table.emphasis2').each((i, table) => {
-        // Same structure as cpuidle: sections separated by th.title header rows
-        // But cpufreq also has rows with th.title label + td values (e.g., "Average  1056 MHz")
         let currentSection = null;
         $(table).find('tr').each((j, row) => {
             const ths = $(row).find('th.title');
             const tds = $(row).find('td');
             if (ths.length > 0 && tds.length === 0) {
-                // Header row — start new section
+                // Header row — flush previous section if it has data, start new one
+                if (currentSection && currentSection.rows.length > 0) {
+                    result.cpufreq.push(currentSection);
+                }
                 const names = ths.map((k, th) => $(th).text().trim()).get();
                 const label = names.filter(n => n && n !== '\u00a0')[0] || '';
                 if (label) {
                     currentSection = { label, cpus: names.slice(1).filter(n => n && n !== '\u00a0'), rows: [] };
-                    result.cpufreq.push(currentSection);
+                } else {
+                    currentSection = null;
                 }
             } else if (ths.length > 0 && tds.length > 0 && currentSection) {
-                // Data row: th.title = label (e.g. "Average"), td = values per CPU
                 const label = ths.first().text().trim();
                 const values = tds.map((k, td) => $(td).text().trim()).get()
                     .map(v => (v && v !== '\u00a0') ? v : '');
@@ -160,6 +161,10 @@ function parseReport() {
                 }
             }
         });
+        // Flush last section
+        if (currentSection && currentSection.rows.length > 0) {
+            result.cpufreq.push(currentSection);
+        }
     });
 
     return result;
