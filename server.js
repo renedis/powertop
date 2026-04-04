@@ -2,6 +2,7 @@ const express = require('express');
 const fs = require('fs');
 const path = require('path');
 const cheerio = require('cheerio');
+const { execSync } = require('child_process');
 
 const app = express();
 const PORT = 3000;
@@ -65,14 +66,29 @@ function parseReport() {
         }
     });
 
-    result.tuning = [];
-    $('#tuning table tr.tune').each((i, row) => {
-        const cells = $(row).find('td').map((j, td) => $(td).text().trim()).get();
-        if (cells.length >= 3) {
-            result.tuning.push({
-                description: cells[0],
-                script: cells[1],
-                status: cells[2]
+    result.tuning = {};
+    const tuningDiv = $('#tuning');
+    let currentCategory = 'Uncategorized';
+    tuningDiv.children().each((i, el) => {
+        const tag = el.tagName;
+        if (tag === 'h2') {
+            currentCategory = $(el).text().trim();
+            if (!result.tuning[currentCategory]) result.tuning[currentCategory] = [];
+        } else if (tag === 'table') {
+            if (!result.tuning[currentCategory]) result.tuning[currentCategory] = [];
+            $(el).find('tr.tune').each((j, row) => {
+                const cells = $(row).find('td').map((k, td) => $(td).text().trim()).get();
+                if (cells.length >= 3) {
+                    result.tuning[currentCategory].push({
+                        description: cells[0],
+                        script: cells[1],
+                        status: cells[2]
+                    });
+                } else if (cells.length === 1 && cells[0]) {
+                    result.tuning[currentCategory].push({
+                        description: cells[0]
+                    });
+                }
             });
         }
     });
@@ -125,6 +141,23 @@ app.get('/api/status', (req, res) => {
         res.json({ available: true, lastUpdated: stats.mtime });
     } else {
         res.json({ available: false, lastUpdated: null });
+    }
+});
+
+app.use(express.json());
+
+app.post('/api/auto-tune', (req, res) => {
+    try {
+        const output = execSync('powertop --auto-tune 2>&1', {
+            timeout: 30000,
+            encoding: 'utf8'
+        });
+        res.json({ success: true, output: output || 'Auto-tune completed successfully.' });
+    } catch (err) {
+        res.status(500).json({
+            success: false,
+            error: err.stderr || err.message || 'Failed to run auto-tune'
+        });
     }
 });
 

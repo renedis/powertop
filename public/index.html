@@ -48,11 +48,15 @@
   #status.live .dot  { background: var(--green); }
   #status.loading .dot { background: var(--yellow); }
   #countdown { font-size: 0.78rem; color: var(--muted); white-space: nowrap; }
-  #refresh-btn {
+  #refresh-btn, #autotune-btn {
     background: var(--surface2); color: var(--text); border: 1px solid var(--border);
     padding: 5px 12px; border-radius: 6px; cursor: pointer; font-size: 0.8rem;
   }
-  #refresh-btn:hover { background: var(--border); }
+  #refresh-btn:hover, #autotune-btn:hover { background: var(--border); }
+  #autotune-btn { border-color: var(--accent); color: var(--accent); }
+  #autotune-btn:disabled { opacity: 0.5; cursor: not-allowed; }
+  #autotune-btn.success { border-color: var(--green); color: var(--green); }
+  #autotune-btn.error { border-color: var(--red); color: var(--red); }
 
   nav {
     background: var(--surface);
@@ -207,6 +211,7 @@
   <div class="header-right">
     <div id="status"><span class="dot"></span><span id="status-text">Waiting for report...</span></div>
     <div id="countdown"></div>
+    <button id="autotune-btn" onclick="runAutoTune()">⚡ Auto-Tune</button>
     <button id="refresh-btn" onclick="loadData()">↻ Refresh</button>
   </div>
 </header>
@@ -396,16 +401,40 @@ function renderDevices(d) {
 
 function renderTuning(d) {
   const el = document.getElementById('tab-tuning');
-  let html = '<div class="section-title">Tuning Suggestions</div><div class="card"><table><thead><tr><th>Description</th><th>Script</th><th>Status</th></tr></thead><tbody>';
-  (d.tuning || []).forEach(r => {
-    const statusClass = (r.status || '').toLowerCase().includes('good') ? 'status-good' : 'status-bad';
-    html += `<tr>
-      <td>${r.description}</td>
-      <td class="mono desc">${r.script}</td>
-      <td class="${statusClass}">${r.status}</td>
-    </tr>`;
+  const tuning = d.tuning || {};
+  const categories = Object.keys(tuning);
+
+  if (categories.length === 0) {
+    el.innerHTML = '<div class="section-title">Tuning</div><p style="color:var(--muted)">No tuning data available.</p>';
+    return;
+  }
+
+  let html = '';
+  categories.forEach(cat => {
+    const items = tuning[cat];
+    if (!items || items.length === 0) return;
+    const hasScript = items.some(r => r.script);
+
+    html += `<div class="section-title">${cat}</div><div class="card"><table><thead><tr><th>Description</th>`;
+    if (hasScript) html += '<th>Script</th><th>Status</th>';
+    html += '</tr></thead><tbody>';
+
+    items.forEach(r => {
+      if (hasScript) {
+        const statusClass = (r.status || '').toLowerCase().includes('good') ? 'status-good' : 'status-bad';
+        html += `<tr>
+          <td>${r.description}</td>
+          <td class="mono desc">${r.script || ''}</td>
+          <td class="${statusClass}">${r.status || ''}</td>
+        </tr>`;
+      } else {
+        html += `<tr><td>${r.description}</td></tr>`;
+      }
+    });
+
+    html += '</tbody></table></div>';
   });
-  html += '</tbody></table></div>';
+
   el.innerHTML = html;
 }
 
@@ -457,6 +486,37 @@ setInterval(() => {
 
 function startPolling() {
   pollingTimer = setInterval(() => { if (!reportAvailable) loadData(); }, 2000);
+}
+
+function runAutoTune() {
+  const btn = document.getElementById('autotune-btn');
+  btn.disabled = true;
+  btn.className = '';
+  btn.textContent = '⚡ Running...';
+
+  fetch('/api/auto-tune', { method: 'POST' })
+    .then(r => r.json())
+    .then(resp => {
+      if (resp.success) {
+        btn.className = 'success';
+        btn.textContent = '⚡ Tuned!';
+        setTimeout(() => loadData(), 2000);
+      } else {
+        btn.className = 'error';
+        btn.textContent = '⚡ Failed';
+      }
+    })
+    .catch(() => {
+      btn.className = 'error';
+      btn.textContent = '⚡ Error';
+    })
+    .finally(() => {
+      setTimeout(() => {
+        btn.disabled = false;
+        btn.className = '';
+        btn.textContent = '⚡ Auto-Tune';
+      }, 3000);
+    });
 }
 
 loadData();
