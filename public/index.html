@@ -182,6 +182,7 @@
   .badge-interrupt{ background: #3b2a1a; color: #fb923c; }
   .badge-kwork    { background: #2d1a3b; color: var(--purple); }
   .badge-default  { background: var(--surface2); color: var(--muted); }
+  .badge-100      { background: #3b1a1a; color: var(--red); font-weight: 600; }
 
   .status-good { color: var(--green); font-weight: 600; }
   .status-bad  { color: var(--red);   font-weight: 600; }
@@ -380,9 +381,11 @@ function renderCpuFreq(d) {
 
 function renderDevices(d) {
   const el = document.getElementById('tab-devices');
-  let html = '<div class="section-title">Device Info</div><div class="card"><table><thead><tr><th>Device</th><th>Status</th></tr></thead><tbody>';
+  let html = '<div class="section-title">Device Info</div><div class="card"><table><thead><tr><th>Usage</th><th>Device</th></tr></thead><tbody>';
   (d.devices || []).forEach(r => {
-    html += `<tr><td>${r.name}</td><td class="mono">${r.status}</td></tr>`;
+    const is100 = r.name.trim().startsWith('100');
+    const badge = is100 ? '<span class="badge badge-100">' + r.name + '</span>' : `<span class="mono">${r.name}</span>`;
+    html += `<tr><td>${badge}</td><td>${r.status}</td></tr>`;
   });
   html += '</tbody></table></div>';
   el.innerHTML = html;
