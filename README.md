@@ -4,10 +4,7 @@ PowerTop in a Docker container with a web UI. Auto-generates reports and refresh
 
 - Multi-arch (amd64/arm64)
 - Based on Debian Trixie with PowerTop 2.15
-- Tabs: Summary, Software, CPU Idle, CPU Frequency, Device Info, Tuning
 - Auto-tune button in the UI
-- Shows host OS and hostname (not the container's)
-- 100% active devices highlighted in red
 
 ## Quick Start
 
