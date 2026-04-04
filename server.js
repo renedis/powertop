@@ -19,16 +19,20 @@ function parseReport() {
 
     result.sysinfo = {};
     $('table.emphasis1 tr').each((i, row) => {
-        let key = $(row).find('th').text().trim();
+        const key = $(row).find('th').text().trim();
         const val = $(row).find('td').text().trim();
-        // Label OS field as Container OS since powertop reads the container's /etc/os-release
-        if (key && val) {
-            if (key.toLowerCase() === 'os' || key.toLowerCase() === 'operating system') {
-                key = 'Container OS';
-            }
-            result.sysinfo[key] = val;
-        }
+        if (key && val) result.sysinfo[key] = val;
     });
+
+    // Override sysinfo with host values (container sees its own OS/hostname)
+    try {
+        const hostOs = fs.readFileSync('/proc/1/root/etc/os-release', 'utf8');
+        const pretty = hostOs.match(/PRETTY_NAME="?([^"\n]+)"?/);
+        if (pretty) result.sysinfo['OS Information'] = pretty[1];
+    } catch (e) {}
+    try {
+        result.sysinfo['System Name'] = fs.readFileSync('/proc/1/root/etc/hostname', 'utf8').trim();
+    } catch (e) {}
 
     result.summary_stats = [];
     $('ul li.summary_list').each((i, el) => {
@@ -100,47 +104,62 @@ function parseReport() {
         }
     });
 
-    result.cpuidle_package = [];
-    result.cpuidle_cores = [];
-    result.cpuidle_cpus = [];
+    result.cpuidle = [];
 
     $('#cpuidle table.emphasis2').each((i, table) => {
-        const headers = $(table).find('th.title').map((j, th) => $(th).text().trim()).get().filter(Boolean);
-        const rows = [];
+        // Tables can contain multiple sections separated by th.title rows
+        // Each section: header row with th.title cells, then data rows with td cells
+        let currentSection = null;
         $(table).find('tr').each((j, row) => {
-            const cells = $(row).find('td').map((k, td) => $(td).text().trim()).get();
-            if (cells.some(c => c && c !== '&nbsp;' && c.trim() !== '')) {
-                rows.push(cells);
+            const ths = $(row).find('th.title');
+            const tds = $(row).find('td');
+            if (ths.length > 0 && tds.length === 0) {
+                // Header row — start new section
+                const names = ths.map((k, th) => $(th).text().trim()).get();
+                const label = names.filter(n => n && n !== '\u00a0')[0] || '';
+                if (label) {
+                    currentSection = { label, rows: [] };
+                    result.cpuidle.push(currentSection);
+                }
+            } else if (tds.length > 0 && currentSection) {
+                // Data row
+                const cells = tds.map((k, td) => $(td).text().trim()).get();
+                const state = cells[0] || '';
+                const value = cells[1] || '';
+                if (state && state !== '\u00a0' && value && value !== '\u00a0') {
+                    currentSection.rows.push({ state, value });
+                }
             }
         });
-        if (headers[0] === 'Package') result.cpuidle_package.push({ headers, rows });
-        else if (headers[0] && headers[0].startsWith('Core')) result.cpuidle_cores.push({ headers, rows });
-        else result.cpuidle_cpus.push({ headers, rows });
     });
 
     result.cpufreq = [];
+
     $('#cpufreq table.emphasis2').each((i, table) => {
-        // First row of th.title elements = column headers
-        const firstRow = $(table).find('tr').first();
-        const headers = firstRow.find('th.title').map((j, th) => $(th).text().trim()).get();
-        const rows = [];
-        // Subsequent rows: first th.title is row label, td elements are values
+        // Same structure as cpuidle: sections separated by th.title header rows
+        // But cpufreq also has rows with th.title label + td values (e.g., "Average  1056 MHz")
+        let currentSection = null;
         $(table).find('tr').each((j, row) => {
-            if (j === 0) return; // skip header row
-            const thElements = $(row).find('th.title');
-            const label = thElements.first().text().trim();
-            const cells = $(row).find('td').map((k, td) => {
-                const text = $(td).text().trim();
-                // Filter out &nbsp; and empty cells
-                return (text && text !== '\u00a0' && text !== '&nbsp;') ? text : '';
-            }).get();
-            // Only include rows that have a label and at least one non-empty cell
-            if (label && label !== '\u00a0' && cells.some(c => c !== '')) {
-                rows.push({ label, cells });
+            const ths = $(row).find('th.title');
+            const tds = $(row).find('td');
+            if (ths.length > 0 && tds.length === 0) {
+                // Header row — start new section
+                const names = ths.map((k, th) => $(th).text().trim()).get();
+                const label = names.filter(n => n && n !== '\u00a0')[0] || '';
+                if (label) {
+                    currentSection = { label, cpus: names.slice(1).filter(n => n && n !== '\u00a0'), rows: [] };
+                    result.cpufreq.push(currentSection);
+                }
+            } else if (ths.length > 0 && tds.length > 0 && currentSection) {
+                // Data row: th.title = label (e.g. "Average"), td = values per CPU
+                const label = ths.first().text().trim();
+                const values = tds.map((k, td) => $(td).text().trim()).get()
+                    .map(v => (v && v !== '\u00a0') ? v : '');
+                if (label && label !== '\u00a0' && values.some(v => v !== '')) {
+                    currentSection.rows.push({ label, values });
+                }
             }
         });
-        // Only include tables with actual data rows
-        if (rows.length) result.cpufreq.push({ headers, rows });
     });
 
     return result;
