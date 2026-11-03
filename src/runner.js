@@ -120,7 +120,6 @@ class Runner extends EventEmitter {
     if (delay !== null) {
       this.nextRunAt = this.now() + delay;
       this.timer = setTimeout(() => this._run(), delay);
-      this.timer.unref();
     }
     return this._emitState();
   }
@@ -145,7 +144,6 @@ class Runner extends EventEmitter {
     clearTimeout(this.timer);
     this.nextRunAt = this.now() + delayMs;
     this.timer = setTimeout(() => this._run(), delayMs);
-    this.timer.unref();
     this._emitState();
   }
 

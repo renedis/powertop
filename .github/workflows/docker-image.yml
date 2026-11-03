@@ -2,14 +2,42 @@ name: Docker Image CI
 
 on:
   push:
-    branches: [ "master", "main" ]
+    branches: [ "main" ]
+  pull_request:
+
+permissions:
+  contents: read
 
 jobs:
+  test:
+    runs-on: ubuntu-latest
+    steps:
+    - uses: actions/checkout@v7
+
+    - uses: actions/setup-node@v7
+      with:
+        # the image runs Debian trixie's nodejs 20
+        node-version: 20
+        cache: npm
+
+    - run: npm ci
+
+    - run: npm test
+
   build-and-push:
+    needs: test
+    if: github.event_name == 'push'
     runs-on: ubuntu-latest
 
     steps:
-    - uses: actions/checkout@v6
+    - uses: actions/checkout@v7
+
+    - name: Read version
+      id: meta
+      run: echo "version=$(node -p 'require("./package.json").version')" >> "$GITHUB_OUTPUT"
+
+    - name: Set up QEMU
+      uses: docker/setup-qemu-action@v4
 
     - name: Set up Docker Buildx
       uses: docker/setup-buildx-action@v4
@@ -28,4 +56,5 @@ jobs:
         platforms: linux/amd64,linux/arm64
         tags: |
           renedis/powertop:latest
+          renedis/powertop:${{ steps.meta.outputs.version }}
           renedis/powertop:${{ github.sha }}
