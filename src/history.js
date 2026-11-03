@@ -1,6 +1,7 @@
 'use strict';
 const fs = require('fs');
 const path = require('path');
+const { EventEmitter } = require('events');
 
 const DAY = 86400000;
 const RANGES = { '1h': 3600000, '6h': 6 * 3600000, '24h': DAY, '7d': 7 * DAY, '30d': 30 * DAY };
@@ -31,8 +32,9 @@ const clean = (obj) => {
  * Append-only NDJSON history, one file per local day, buffered in memory and
  * flushed every few minutes to keep disk writes small.
  */
-class History {
+class History extends EventEmitter {
   constructor({ dir, days = 7, now = Date.now, flushMs = 600000, maxPoints = 720, log = console }) {
+    super();
     this.dir = dir;
     this.days = days;
     this.now = now;
@@ -101,7 +103,9 @@ class History {
   }
 
   addEvent(kind, text, t) {
-    return this._add({ t: t ?? this.now(), k: 'e', kind, text: String(text).slice(0, 300) });
+    const rec = this._add({ t: t ?? this.now(), k: 'e', kind, text: String(text).slice(0, 300) });
+    this.emit('event', rec);
+    return rec;
   }
 
   setDays(days) {
