@@ -16,8 +16,16 @@ export function residencyBars(states, color = 'var(--ch-pkg)') {
 /** rows: [{ label, states: [{ state, pct, avgMs? }] }] → one row per CPU/core, one column per state. */
 export function heatTable(rows, { rowHeader = 'CPU' } = {}) {
   if (!rows || !rows.length) return html`<p class="empty-state">No data in this report.</p>`;
-  const cols = [];
-  for (const r of rows) for (const s of r.states) if (!cols.includes(s.state)) cols.push(s.state);
+  const seen = [];
+  for (const r of rows) for (const s of r.states) if (!seen.includes(s.state)) seen.push(s.state);
+  // C0 active, POLL, then C-states by depth (C1 < C1E < C3 ...); other names keep their order
+  const depth = (name, i) => {
+    if (/^C0\b/.test(name)) return -2;
+    if (/^POLL$/i.test(name)) return -1;
+    const m = /^C(\d+)(\S*)/.exec(name);
+    return m ? Number(m[1]) + (m[2] ? 0.5 : 0) : 1000 + i;
+  };
+  const cols = seen.map((name, i) => ({ name, d: depth(name, i) })).sort((a, b) => a.d - b.d).map((x) => x.name);
   return html`<div class="table-wrap"><table class="data heat">
     <thead><tr><th scope="col">${rowHeader}</th>${cols.map((c) => html`<th scope="col" class="r">${c}</th>`)}</tr></thead>
     <tbody>${rows.map(

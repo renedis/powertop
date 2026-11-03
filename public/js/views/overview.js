@@ -136,7 +136,7 @@ export default {
         <thead><tr><th scope="col" class="r">Usage</th><th scope="col" class="r">Events/s</th><th scope="col" class="hide-sm">Category</th><th scope="col">Description</th></tr></thead>
         <tbody>${rows.map(
           (r) => html`<tr><td class="r num">${r.usage}</td><td class="r num">${r.events === null ? '–' : fmt.rate(r.events)}</td>
-            <td class="hide-sm"><span class="tag">${r.category}</span></td><td class="mono wrap">${r.description}</td></tr>`
+            <td class="hide-sm"><span class="tag">${r.category}</span></td><td class="mono"><span class="clamp" title="${r.description}">${r.description}</span></td></tr>`
         )}</tbody>
       </table>`
     );

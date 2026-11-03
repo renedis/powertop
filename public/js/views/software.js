@@ -20,7 +20,7 @@ export default {
         { key: 'wakeups', label: 'Wakeups/s', align: 'r', cls: 'num', sort: (r) => r.wakeups, cell: (r) => fmt.rate(r.wakeups) },
         { key: 'diskIo', label: 'Disk IO/s', align: 'r', cls: 'num', sort: (r) => r.diskIo, cell: (r) => (r.diskIo === null ? '' : fmt.rate(r.diskIo)) },
         { key: 'category', label: 'Category', sort: (r) => r.category, cell: (r) => html`<span class="tag">${r.category}</span>` },
-        { key: 'description', label: 'Description', cls: 'mono wrap', sort: (r) => r.description },
+        { key: 'description', label: 'Description', cls: 'mono', sort: (r) => r.description, cell: (r) => html`<span class="clamp" title="${r.description}">${r.description}</span>` },
       ],
     });
   },

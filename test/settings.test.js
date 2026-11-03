@@ -39,7 +39,7 @@ test('env overlay, invalid env values ignored', () => {
   assert.equal(v.mqtt.password, 'pw');
   assert.deepEqual(v.peers, [{ name: 'a', url: 'http://x:1' }, { name: 'b', url: 'http://y:2' }]);
   assert.deepEqual(v.sensors, [
-    { id: 'wall', name: 'Wall', topic: 'zigbee2mqtt/Server plug', path: 'power', unit: 'W', role: 'wall' },
+    { id: 'wall', name: 'Server plug', topic: 'zigbee2mqtt/Server plug', path: 'power', unit: 'W', role: 'wall' },
   ]);
   assert.equal(v.history.days, 14);
 });
@@ -134,4 +134,12 @@ test('resolveDataDir', () => {
   assert.equal(resolveDataDir({}, (d) => d === '/data'), '/data');
   assert.equal(resolveDataDir({}, (d) => d === '/tmp/powertop'), '/tmp/powertop');
   assert.equal(resolveDataDir({}, () => false), '/data');
+});
+
+test('prototype keys in a patch are ignored', () => {
+  const s = new Settings({ file: tmpFile(), env: {} }).load();
+  s.update(JSON.parse('{"__proto__":{"polluted":true},"constructor":{"x":1},"run":{"mode":"paused"}}'));
+  assert.equal(s.get().run.mode, 'paused');
+  assert.equal({}.polluted, undefined);
+  assert.equal(Object.getPrototypeOf(s.get()), Object.prototype);
 });

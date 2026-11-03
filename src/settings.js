@@ -33,7 +33,7 @@ function merge(base, patch) {
   const out = clone(base);
   if (!isObj(patch)) return out;
   for (const [key, val] of Object.entries(patch)) {
-    if (!(key in DEFAULTS)) continue;
+    if (!Object.prototype.hasOwnProperty.call(DEFAULTS, key)) continue;
     if (ARRAY_SECTIONS.includes(key)) out[key] = val;
     else if (isObj(val)) out[key] = { ...(out[key] || {}), ...val };
   }
@@ -165,7 +165,7 @@ function envPatches(env) {
   if (env.MQTT_PASS) p.push({ mqtt: { password: env.MQTT_PASS } });
   if (env.MQTT_BASE_TOPIC) p.push({ mqtt: { baseTopic: env.MQTT_BASE_TOPIC } });
   if (env.WALL_TOPIC) {
-    p.push({ sensors: [{ id: 'wall', name: 'Wall', topic: env.WALL_TOPIC, path: env.WALL_PATH || 'power', unit: 'W', role: 'wall' }] });
+    p.push({ sensors: [{ id: 'wall', name: env.WALL_NAME || env.WALL_TOPIC.split('/').pop() || 'Wall', topic: env.WALL_TOPIC, path: env.WALL_PATH || 'power', unit: 'W', role: 'wall' }] });
   }
   if (env.PEERS) p.push({ peers: parsePeers(env.PEERS) });
   if (env.HISTORY_DAYS) p.push({ history: { days: num(env.HISTORY_DAYS) } });
