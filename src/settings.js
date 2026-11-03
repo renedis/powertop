@@ -132,7 +132,7 @@ function validate(s) {
     mqtt,
     sensors,
     peers,
-    history: { days: int(s.history.days, 1, 90, 'history.days') },
+    history: { days: int(s.history.days, 1, 31, 'history.days') },
     impact: {
       settleSec: int(s.impact.settleSec, 0, 600, 'impact.settleSec'),
       windowSec: int(s.impact.windowSec, 30, 1800, 'impact.windowSec'),
