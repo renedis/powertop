@@ -1,13 +1,22 @@
 {
   "name": "powertop-web",
-  "version": "1.0.0",
-  "description": "PowerTop web interface",
+  "version": "2.0.0",
+  "description": "PowerTOP web dashboard: live power, history, tuning, MQTT sensors and multi-host view",
   "main": "server.js",
+  "private": true,
+  "license": "GPL-3.0-only",
+  "engines": {
+    "node": ">=20.18.1"
+  },
   "scripts": {
-    "start": "node server.js"
+    "start": "node server.js",
+    "dev": "DEV_FIXTURE=test/fixtures/intel-untuned.html RAPL_FAKE=1 DATA_DIR=.local/dev/data REPORT_DIR=.local/dev/report SYSFS_ROOT=.local/dev/sysfs HOST_ROOT=.local/dev/host node server.js",
+    "test": "node --test"
   },
   "dependencies": {
-    "express": "^5.2.1",
-    "cheerio": "^1.0.0"
+    "cheerio": "^1.2.0",
+    "express": "^5.3.0",
+    "mqtt": "^5.16.1",
+    "uplot": "^1.6.32"
   }
 }
