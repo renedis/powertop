@@ -79,7 +79,7 @@ test('full impact run: hold, settle, baseline, apply, settle, after, result', as
   const saved = JSON.parse(fs.readFileSync(path.join(dir, 'impact.json'), 'utf8'));
   assert.equal(saved.length, 1);
   assert.equal(events.length, 1);
-  assert.match(events[0].text, /pkg -1/);
+  assert.match(events[0].text, /package -1 W/);
   assert.equal(impact.status().running, false);
 });
 

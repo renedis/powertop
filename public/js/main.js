@@ -37,6 +37,11 @@ export function toast(text, kind = 'ok', ms = 4500) {
 const hostOf = (s = store.get()) => s.hosts.find((h) => h.key === s.host) || { key: 'local', name: 'This host' };
 
 async function guard(fn, okText) {
+  // actions wait for a running measurement to finish; say so when that takes a while
+  const slow = setTimeout(() => {
+    const r = store.get().status && store.get().status.runner;
+    if (r && r.state === 'measuring') toast('Waiting for the running measurement to finish, then applying.', 'info', 6000);
+  }, 1200);
   try {
     const out = await fn();
     if (okText) toast(typeof okText === 'function' ? okText(out) : okText);
@@ -44,6 +49,8 @@ async function guard(fn, okText) {
   } catch (e) {
     toast(e.message, 'fault', 7000);
     return null;
+  } finally {
+    clearTimeout(slow);
   }
 }
 

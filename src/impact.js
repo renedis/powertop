@@ -178,7 +178,8 @@ class Impact extends EventEmitter {
       this.results.unshift(result);
       this.results = this.results.slice(0, this.maxResults);
       this._save();
-      const parts = ['wall', 'psys', 'pkg'].filter((k) => k in delta).map((k) => `${k} ${signed(delta[k])} W`);
+      const NAMES = { wall: 'wall', psys: 'platform', pkg: 'package' };
+      const parts = ['wall', 'psys', 'pkg'].filter((k) => k in delta).map((k) => `${NAMES[k]} ${signed(round(delta[k], 2))} W`);
       const what = t.items.length === 1 ? t.items[0] : `${t.items.length} items`;
       this.history.addEvent('impact', `Impact test (${what}): ${parts.join(', ') || 'no power data'}`);
       this._setPhase('done');
