@@ -11,6 +11,7 @@
   "scripts": {
     "start": "node server.js",
     "dev": "DEV_FIXTURE=test/fixtures/intel-untuned.html RAPL_FAKE=1 DATA_DIR=.local/dev/data REPORT_DIR=.local/dev/report SYSFS_ROOT=.local/dev/sysfs HOST_ROOT=.local/dev/host node server.js",
+    "dev:udm": "DEV_FIXTURE=test/fixtures/arm.html UDM_FAKE=1 PORT=${PORT:-3001} DATA_DIR=.local/dev-udm/data REPORT_DIR=.local/dev-udm/report SYSFS_ROOT=.local/dev-udm/sysfs HOST_ROOT=.local/dev/host node server.js",
     "test": "node --test"
   },
   "dependencies": {

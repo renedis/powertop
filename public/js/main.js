@@ -11,8 +11,11 @@ import devices from './views/devices.js';
 import tuning from './views/tuning.js';
 import wake from './views/wake.js';
 import settings from './views/settings.js';
+import udm from './views/udm.js';
 
-const VIEWS = [overview, power, cpu, software, devices, tuning, wake, settings];
+const VIEWS = [overview, udm, power, cpu, software, devices, tuning, wake, settings];
+// views with when() only show up in the menu for hosts that have them (udm: UniFi consoles)
+const shown = (s) => VIEWS.filter((v) => !v.when || v.when(s));
 const MODES = [
   { id: 'adaptive', label: 'Adaptive', hint: 'Every minute while this page is open, every 15 minutes otherwise' },
   { id: 'continuous', label: 'Continuous', hint: 'Every minute, always' },
@@ -333,6 +336,10 @@ function renderReadouts(s) {
     tiles.push(readout({ label: 'Package', value: fmt.watts(meanLast(rapl, 'pkg') ?? k.pkgW), unit: 'W', ch: 'var(--ch-pkg)', sparkValues: rapl.map((x) => x.pkg), sub: 'RAPL package-0' }));
   }
   if (k.cpuPct !== null && k.cpuPct !== undefined) tiles.push(readout({ label: 'CPU', value: fmt.pct(k.cpuPct), unit: '%', sub: 'busy during last measurement' }));
+  if (caps.udm && k.udm) {
+    if (typeof k.udm.socC === 'number') tiles.push(readout({ label: 'SoC', value: k.udm.socC.toFixed(1), unit: '°C', sub: 'die temperature, live' }));
+    if (typeof k.udm.fanRpm === 'number') tiles.push(readout({ label: 'Fan', value: String(Math.round(k.udm.fanRpm)), unit: 'rpm', sub: k.udm.fanRpm ? 'fastest fan, live' : 'fans stopped' }));
+  }
   if (k.wakeups !== null && k.wakeups !== undefined) tiles.push(readout({ label: 'Wakeups', value: fmt.rate(k.wakeups), unit: '/s', sub: 'timer and interrupt wakeups' }));
   if (k.deep) tiles.push(readout({ label: k.deep.label === 'PC6+' ? 'Package C6 and deeper' : `Idle in ${k.deep.label}`, value: fmt.pct(k.deep.pct), unit: '%', sub: 'residency, last measurement' }));
   if (k.openTunables !== null && k.openTunables !== undefined) {
@@ -360,7 +367,7 @@ function renderNav(s) {
   const id = current ? current.view.id : 'overview';
   render(
     $('#nav'),
-    html`${VIEWS.map((v) => {
+    html`${shown(s).map((v) => {
       const n = counts[v.id];
       const attn = v.id === 'tuning' && n > 0;
       return html`<a href="#/${v.id}" ${v.id === id ? raw('aria-current="page"') : ''}>${v.label}${n === null || n === undefined ? '' : html`<span class="count ${attn ? 'attn' : ''}">${n}</span>`}</a>`;
@@ -393,7 +400,7 @@ store.subscribe((s, keys) => {
   }
   if (touched(keys, 'status', 'settings')) renderControls(s);
   if (touched(keys, 'status', 'summary', 'live', 'mqtt', 'report')) renderReadouts(s);
-  if (touched(keys, 'report', 'summary')) renderNav(s);
+  if (touched(keys, 'report', 'summary', 'status')) renderNav(s);
   if (touched(keys, 'host', 'hosts')) document.title = `${current ? current.view.label : 'Overview'} · ${hostOf(s).name || 'PowerTop'}`;
   if (current) current.view.update(s, keys);
 });

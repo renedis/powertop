@@ -11,6 +11,7 @@ const { Impact } = require('./impact');
 const { Peers } = require('./peers');
 const { Hub } = require('./sse');
 const { Collector } = require('./collector');
+const { Udm, MemSource } = require('./udm');
 const { hostInfo } = require('./host');
 const { parseReport, deepIdle } = require('./parser');
 const { createApi, status } = require('./api');
@@ -31,16 +32,28 @@ async function buildApp(cfg, { env = process.env, log = console, mqttConnect, de
   const peers = new Peers({ settings });
   const hub = new Hub();
   const collector = new Collector({ rapl, sensors, history, settings });
+  const udm = new Udm({
+    enabled: cfg.udm !== false,
+    source: cfg.udmFake ? new MemSource(require('./udm-fake').fakeConsole) : null,
+    procRoot: cfg.udmProcRoot,
+    sysRoot: cfg.udmSysRoot,
+    hostRoot: cfg.hostRoot,
+    history,
+    log,
+  });
 
   let hostCache = null;
   const host = () => {
     if (!hostCache || (!hostCache.cpu && runner.latest)) hostCache = hostInfo({ hostRoot: cfg.hostRoot, report: runner.latest && runner.latest.report });
     return hostCache;
   };
-  const ctx = { cfg, settings, history, runner, rapl, sensors, tuning, impact, peers, hub, collector, host };
+  const ctx = { cfg, settings, history, runner, rapl, sensors, tuning, impact, peers, hub, collector, host, udm };
 
   hub.on('connect', (client) => hub.send('hello', status(ctx), client));
-  hub.on('viewers', (n) => runner.setViewers(n));
+  hub.on('viewers', (n) => {
+    runner.setViewers(n);
+    udm.setViewers(n);
+  });
   runner.on('state', (s) => hub.send('runner', s));
   runner.on('report', (latest) => {
     const rep = latest.report;
@@ -86,6 +99,7 @@ async function buildApp(cfg, { env = process.env, log = console, mqttConnect, de
       rapl.start();
       sensors.start();
       collector.start();
+      udm.start();
       runner.start();
       await new Promise((resolve) => {
         server = app.listen(port, resolve);
@@ -96,6 +110,7 @@ async function buildApp(cfg, { env = process.env, log = console, mqttConnect, de
       runner.stop();
       rapl.stop();
       collector.stop();
+      udm.stop();
       sensors.close();
       history.stop();
       hub.closeAll();

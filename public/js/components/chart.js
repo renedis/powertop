@@ -49,7 +49,15 @@ function niceMax(v) {
  * markers: () => [{ t (ms), text }] drawn as dashed amber verticals.
  * xRange: () => [minSec, maxSec] pins the time window (kept until the user zooms).
  */
-export function lineChart(el, { series, height = 220, unit = '', fmt = (v) => String(v), markers = null, zoom = false, legend = true, yMax = null, xRange = null }) {
+function autoRange(min, max) {
+  if (min === null || max === null || !Number.isFinite(min) || !Number.isFinite(max)) return [0, 1];
+  const span = max - min || Math.max(1, Math.abs(max) * 0.1);
+  const pad = span * 0.15;
+  return [Math.floor((min - pad) * 10) / 10, Math.ceil((max + pad) * 10) / 10];
+}
+
+/** yAuto: fit the y-axis to the data instead of starting at zero (temperatures, dBm). */
+export function lineChart(el, { series, height = 220, unit = '', fmt = (v) => String(v), markers = null, zoom = false, legend = true, yMax = null, yAuto = false, xRange = null }) {
   el.innerHTML = '';
   const silk = css('--silk');
   const grid = css('--graticule');
@@ -69,7 +77,7 @@ export function lineChart(el, { series, height = 220, unit = '', fmt = (v) => St
     focus: { alpha: 0.35 },
     scales: {
       x: { time: true },
-      y: { range: (u, min, max) => [0, yMax ?? niceMax((max || 0) * 1.08)] },
+      y: { range: (u, min, max) => (yAuto ? autoRange(min, max) : [0, yMax ?? niceMax((max || 0) * 1.08)]) },
     },
     axes: [
       { ...axis, values: (u, splits) => timeTicks(splits) },

@@ -13,6 +13,7 @@ function caps(ctx) {
     raplZones: ctx.rapl.zones.map((z) => z.key),
     wall: Boolean(ctx.sensors.wallSensor()),
     mqtt: Boolean(ctx.settings.get().mqtt.url),
+    udm: Boolean(ctx.udm && ctx.udm.available),
   };
 }
 
@@ -34,6 +35,7 @@ function summary(ctx) {
       wakeups: report ? report.summary.wakeups : null,
       deep: report ? deepIdle(report) : null,
       openTunables: report ? report.tuning.bad.filter((x) => !Tuning.isExcluded(x, exclude)).length : null,
+      udm: ctx.udm ? ctx.udm.kpi() : null,
     },
     runner: { state: run.state, mode: run.mode, lastUpdated: iso(run.lastUpdated), nextRunAt: iso(run.nextRunAt) },
   };
@@ -86,6 +88,11 @@ function createApi(ctx) {
     res.json({ rapl: rapl.live(), zones: rapl.zones.map((z) => z.key), wall: wall ? sensors.points(wall.id, now - 600000, now) : [] });
   });
   r.get('/history', (req, res) => res.json(history.query(String(req.query.range || '24h'))));
+  r.get('/udm', (req, res) => res.json(ctx.udm ? ctx.udm.snapshot() : { available: false }));
+  r.get('/udm/history', (req, res) => {
+    if (!ctx.udm || !ctx.udm.available) return res.status(404).json({ error: 'not a UniFi console' });
+    return res.json(history.queryUdm(String(req.query.range || '24h')));
+  });
 
   r.post('/tuning/apply', handle(async (req, res) => res.json({ results: await tuning.apply((req.body || {}).ids) })));
   r.post('/tuning/auto', handle(async (req, res) => res.json(await tuning.autoTune())));

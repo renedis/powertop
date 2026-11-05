@@ -31,6 +31,11 @@ function loadConfig(env = process.env) {
     hostRoot: env.HOST_ROOT || '/proc/1/root',
     devFixture: env.DEV_FIXTURE ? path.resolve(env.DEV_FIXTURE) : '',
     raplFake: env.RAPL_FAKE === '1',
+    // UniFi console page: on when /proc/ubnthal exists; UDM=0 turns it off, UDM_FAKE=1 simulates one
+    udm: env.UDM !== '0' && env.UDM !== 'false',
+    udmFake: env.UDM_FAKE === '1',
+    udmProcRoot: env.UDM_PROC_ROOT || '/proc',
+    udmSysRoot: env.UDM_SYS_ROOT || '/sys',
     version: require('../package.json').version,
   };
 }

@@ -44,6 +44,7 @@ class History extends EventEmitter {
     this.power = [];
     this.runs = [];
     this.events = [];
+    this.udm = [];
     this.pending = [];
     this.timers = [];
   }
@@ -77,12 +78,12 @@ class History extends EventEmitter {
         this._list(rec.k)?.push(rec);
       }
     }
-    for (const list of [this.power, this.runs, this.events]) list.sort((a, b) => a.t - b.t);
+    for (const list of [this.power, this.runs, this.events, this.udm]) list.sort((a, b) => a.t - b.t);
     return this;
   }
 
   _list(kind) {
-    return kind === 'p' ? this.power : kind === 'r' ? this.runs : kind === 'e' ? this.events : null;
+    return kind === 'p' ? this.power : kind === 'r' ? this.runs : kind === 'e' ? this.events : kind === 'u' ? this.udm : null;
   }
 
   _add(rec) {
@@ -100,6 +101,13 @@ class History extends EventEmitter {
 
   addRun(rec) {
     return this._add(clean({ t: rec.t ?? this.now(), k: 'r', cpu: rec.cpu, wak: rec.wak, deep: rec.deep, open: rec.open, dur: rec.dur }));
+  }
+
+  /** UniFi console readings: flat numeric keys (see src/udm.js). */
+  addUdm(rec) {
+    const r = { t: rec.t ?? this.now(), k: 'u' };
+    for (const [key, v] of Object.entries(rec)) if (key !== 't' && key !== 'k' && typeof v === 'number' && Number.isFinite(v)) r[key] = v;
+    return this._add(r);
   }
 
   addEvent(kind, text, t) {
@@ -136,7 +144,7 @@ class History extends EventEmitter {
 
   prune() {
     const cutoff = this.now() - this.days * DAY;
-    for (const key of ['power', 'runs', 'events']) this[key] = this[key].filter((r) => r.t >= cutoff);
+    for (const key of ['power', 'runs', 'events', 'udm']) this[key] = this[key].filter((r) => r.t >= cutoff);
     let files = [];
     try {
       files = fs.readdirSync(this.dir);
@@ -216,6 +224,15 @@ class History extends EventEmitter {
     const runs = { t: runCols.t, ...Object.fromEntries(RUN_KEYS.map((k) => [k, runCols.series[k] || runCols.t.map(() => null)])) };
     const events = this.events.filter((e) => e.t >= from).map(({ t, kind, text }) => ({ t, kind, text }));
     return { range, from, to, bucketMs, power, runs, events };
+  }
+
+  queryUdm(range) {
+    if (!RANGES[range]) range = '24h';
+    const span = RANGES[range];
+    const to = this.now();
+    const from = to - span;
+    const bucketMs = Math.max(60000, Math.ceil(span / this.maxPoints / 60000) * 60000);
+    return { range, from, to, bucketMs, ...this._columns(this.udm, null, from, bucketMs) };
   }
 }
 

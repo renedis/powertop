@@ -37,7 +37,8 @@ export default {
       render(
         note,
         html`<div class="callout info"><strong>No software data on this host.</strong> Its kernel is built without perf events and tracepoints
-          (CONFIG_PERF_EVENTS), so powertop cannot attribute wakeups to processes. Idle states, devices and tunables still work.</div>`
+          (CONFIG_PERF_EVENTS), so powertop cannot attribute wakeups to processes. Idle states, devices and tunables still work.
+          ${caps.udm ? html`The <a href="#/udm">UDM page</a> lists CPU per process, service and container from /proc instead.` : ''}</div>`
       );
     } else render(note, '');
     this.table.setRows(s.report ? s.report.software : []);

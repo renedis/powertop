@@ -54,7 +54,9 @@ export default {
                   })}</tr>`
                 )}</tbody>
               </table></div>`
-            : html`<p class="empty-state">No frequency data: the kernel on this host has no cpufreq support or reports no residency.</p>`}
+            : s.status && s.status.caps && s.status.caps.udm
+              ? html`<p class="empty-state">Fixed clock: this SoC has no frequency scaling, so load and idle depth alone set its power. The <a href="#/udm">UDM page</a> has the per-core split.</p>`
+              : html`<p class="empty-state">No frequency data: the kernel on this host has no cpufreq support or reports no residency.</p>`}
         </section>`
     );
   },
