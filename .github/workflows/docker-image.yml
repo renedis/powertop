@@ -2,7 +2,7 @@ name: Docker Image CI
 
 on:
   push:
-    branches: [ "main" ]
+    branches: [ "main", "unifi" ]
   pull_request:
 
 permissions:
@@ -36,6 +36,19 @@ jobs:
       id: meta
       run: echo "version=$(node -p 'require("./package.json").version')" >> "$GITHUB_OUTPUT"
 
+    # main publishes latest, the version and the commit; the unifi branch
+    # (UniFi console page) publishes only its own tag and leaves latest alone
+    - name: Image tags
+      id: tags
+      env:
+        VERSION: ${{ steps.meta.outputs.version }}
+      run: |
+        if [ "$GITHUB_REF_NAME" = "unifi" ]; then
+          echo "list=renedis/powertop:unifi" >> "$GITHUB_OUTPUT"
+        else
+          echo "list=renedis/powertop:latest,renedis/powertop:${VERSION},renedis/powertop:${GITHUB_SHA}" >> "$GITHUB_OUTPUT"
+        fi
+
     - name: Set up QEMU
       uses: docker/setup-qemu-action@v4
 
@@ -54,7 +67,4 @@ jobs:
         context: .
         push: true
         platforms: linux/amd64,linux/arm64
-        tags: |
-          renedis/powertop:latest
-          renedis/powertop:${{ steps.meta.outputs.version }}
-          renedis/powertop:${{ github.sha }}
+        tags: ${{ steps.tags.outputs.list }}
